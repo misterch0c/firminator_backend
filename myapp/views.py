@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 
 from django.http import HttpResponse
+from myapp.models import Image, Product, Brand
 #import datetime
 
 
@@ -43,8 +44,18 @@ MODEL:
         product (model)
         version
 """
+def get_brand(brand):
+    b = Brand.objects.filter(name__icontains=brand)
+    if not b:
+        return 99
+    else:
+        return b[0].id
+
 @csrf_exempt
 def upload(request):
+    desc = request.POST['description']
+    brnd = request.POST['brand']
+
     if not request.method == 'POST':
         return HttpResponse("POST only")
 
@@ -55,6 +66,11 @@ def upload(request):
     path = 'uploads/' + f.name
     handle_uploaded_file(f, path)
     md5 = io_md5(path)
+
+    #TODO, Add product...
+    image = Image(filename=f.name,description=desc,brand_id=get_brand(brnd),hash=md5, rootfs_extracted=False, kernel_extracted=False)
+    image.save()
+
     return HttpResponse("File uploaded // hash : %s" % md5)
 
 

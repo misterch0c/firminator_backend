@@ -21,4 +21,5 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     url(r'^test/', views.test),
     url(r'^file/', views.upload),
+    url(r'^brand/', views.get_brand),
 ]
