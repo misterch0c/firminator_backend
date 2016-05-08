@@ -14,6 +14,9 @@ import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+UPLOAD_DIR = BASE_DIR+"/uploads/"
+FIRMADYNE_DIR="not set"
+EXTRACTED_DIR=BASE_DIR+"/extracted/"
 
 
 # Quick-start development settings - unsuitable for production
