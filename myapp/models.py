@@ -131,6 +131,7 @@ class DjangoSession(models.Model):
 
 
 class Image(models.Model):
+    id = models.AutoField(primary_key=True)
     filename = models.CharField(max_length=-1)
     description = models.CharField(max_length=-1, blank=True, null=True)
     brand = models.ForeignKey(Brand)
@@ -139,6 +140,9 @@ class Image(models.Model):
     kernel_extracted = models.NullBooleanField()
     arch = models.CharField(max_length=-1, blank=True, null=True)
     kernel_version = models.CharField(max_length=-1, blank=True, null=True)
+
+    def __str__(self):
+        return '%s %s %s' % (self.id, self.filename, self.hash)
 
     class Meta:
         managed = False
@@ -181,6 +185,9 @@ class Product(models.Model):
     date = models.DateTimeField(blank=True, null=True)
     mib_filename = models.CharField(max_length=-1, blank=True, null=True)
     sdk_filename = models.CharField(max_length=-1, blank=True, null=True)
+
+    def __str__(self):
+        return '%s %s %s' % (self.iid, self.product, self.version)
 
     class Meta:
         managed = False
