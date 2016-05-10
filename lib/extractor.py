@@ -609,8 +609,7 @@ class ExtractionItem(object):
 
                     self.printf(">>>> Found Linux filesystem in %s!" % unix[1])
                     if self.output:
-                        shutil.make_archive(self.output, "gztar",
-                                            root_dir=unix[1])
+                        shutil.make_archive(self.output, "gztar",root_dir=unix[1])
                     else:
                         self.extractor.do_rootfs = False
                     return True

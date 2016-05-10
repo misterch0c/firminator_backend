@@ -1,6 +1,7 @@
 import subprocess
 import unicodedata
-
+import os
+import tarfile
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
@@ -39,6 +40,12 @@ def get_brand(brand):
     else:
         return b[0].id
 
+#Decompress extracted in tmp for analysis
+def extract_tar_tmp(id):
+    fname=str(id)+'.tar.gz'
+    tt = tarfile.open(settings.EXTRACTED_DIR+fname)
+    tt.extractall('/tmp/'+fname)
+
 @csrf_exempt
 def upload(request):
     desc = request.POST['description']
@@ -53,10 +60,11 @@ def upload(request):
         return HttpResponse("No file")
 
     f = request.FILES['file']
-    path = 'uploads/' + f.name
+    path = settings.UPLOAD_DIR + f.name
     handle_uploaded_file(f, path)
     md5 = io_md5(path)
-    image = Image(filename=f.name,description=desc,brand_id=get_brand(brnd),hash=md5, rootfs_extracted=False, kernel_extracted=False)
+    brand=get_brand(brnd)
+    image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
 
@@ -67,9 +75,11 @@ def upload(request):
     # print product
 
     #rootfs=True, parallel=False, ,kernel=False, 
-    extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,'NetGear')
+    print(brand)
+    print(image.id)
+    extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
     extract.extract()
-
+    extract_tar_tmp(image.id)
     return HttpResponse("File uploaded // hash : %s" % md5)
 
 

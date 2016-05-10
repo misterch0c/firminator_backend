@@ -27,7 +27,7 @@ class AuthGroupPermissions(models.Model):
     class Meta:
         managed = False
         db_table = 'auth_group_permissions'
-        unique_together = (('group_id', 'permission_id'),)
+        #unique_together = (('group_id', 'permission_id'),)
 
 
 class AuthPermission(models.Model):
@@ -38,7 +38,7 @@ class AuthPermission(models.Model):
     class Meta:
         managed = False
         db_table = 'auth_permission'
-        unique_together = (('content_type_id', 'codename'),)
+        #unique_together = (('content_type_id', 'codename'),)
 
 
 class AuthUser(models.Model):
@@ -65,7 +65,7 @@ class AuthUserGroups(models.Model):
     class Meta:
         managed = False
         db_table = 'auth_user_groups'
-        unique_together = (('user_id', 'group_id'),)
+        #unique_together = (('user_id', 'group_id'),)
 
 
 class AuthUserUserPermissions(models.Model):
@@ -75,11 +75,11 @@ class AuthUserUserPermissions(models.Model):
     class Meta:
         managed = False
         db_table = 'auth_user_user_permissions'
-        unique_together = (('user_id', 'permission_id'),)
+        #unique_together = (('user_id', 'permission_id'),)
 
 
 class Brand(models.Model):
-    name = models.CharField(unique=True, max_length=-1)
+    name = models.CharField(unique=True, max_length=255)
 
     class Meta:
         managed = False
@@ -107,7 +107,7 @@ class DjangoContentType(models.Model):
     class Meta:
         managed = False
         db_table = 'django_content_type'
-        unique_together = (('app_label', 'model'),)
+        #unique_together = (('app_label', 'model'),)
 
 
 class DjangoMigrations(models.Model):
@@ -132,14 +132,14 @@ class DjangoSession(models.Model):
 
 class Image(models.Model):
     id = models.AutoField(primary_key=True)
-    filename = models.CharField(max_length=-1)
-    description = models.CharField(max_length=-1, blank=True, null=True)
+    filename = models.CharField(max_length=255)
+    description = models.CharField(max_length=255, blank=True, null=True)
     brand = models.ForeignKey(Brand)
-    hash = models.CharField(unique=True, max_length=-1, blank=True, null=True)
+    hash = models.CharField(unique=True, max_length=255, blank=True, null=True)
     rootfs_extracted = models.NullBooleanField()
     kernel_extracted = models.NullBooleanField()
-    arch = models.CharField(max_length=-1, blank=True, null=True)
-    kernel_version = models.CharField(max_length=-1, blank=True, null=True)
+    arch = models.CharField(max_length=255, blank=True, null=True)
+    kernel_version = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return '%s %s %s' % (self.id, self.filename, self.hash)
@@ -150,7 +150,7 @@ class Image(models.Model):
 
 
 class Object(models.Model):
-    hash = models.CharField(unique=True, max_length=-1, blank=True, null=True)
+    hash = models.CharField(unique=True, max_length=255, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -160,7 +160,7 @@ class Object(models.Model):
 class ObjectToImage(models.Model):
     oid = models.ForeignKey(Object, db_column='oid')
     iid = models.ForeignKey(Image, db_column='iid')
-    filename = models.CharField(max_length=-1)
+    filename = models.CharField(max_length=255)
     regular_file = models.NullBooleanField()
     permissions = models.IntegerField(blank=True, null=True)
     uid = models.IntegerField(blank=True, null=True)
@@ -169,22 +169,22 @@ class ObjectToImage(models.Model):
     class Meta:
         managed = False
         db_table = 'object_to_image'
-        unique_together = (('oid', 'iid', 'filename'),)
+        #unique_together = (('oid', 'iid', 'filename'),)
 
 
 class Product(models.Model):
     iid = models.ForeignKey(Image, db_column='iid')
-    url = models.CharField(max_length=-1)
-    mib_hash = models.CharField(max_length=-1, blank=True, null=True)
-    mib_url = models.CharField(max_length=-1, blank=True, null=True)
-    sdk_hash = models.CharField(max_length=-1, blank=True, null=True)
-    sdk_url = models.CharField(max_length=-1, blank=True, null=True)
-    product = models.CharField(max_length=-1, blank=True, null=True)
-    version = models.CharField(max_length=-1, blank=True, null=True)
-    build = models.CharField(max_length=-1, blank=True, null=True)
+    url = models.CharField(max_length=255)
+    mib_hash = models.CharField(max_length=255, blank=True, null=True)
+    mib_url = models.CharField(max_length=255, blank=True, null=True)
+    sdk_hash = models.CharField(max_length=255, blank=True, null=True)
+    sdk_url = models.CharField(max_length=255, blank=True, null=True)
+    product = models.CharField(max_length=255, blank=True, null=True)
+    version = models.CharField(max_length=255, blank=True, null=True)
+    build = models.CharField(max_length=255, blank=True, null=True)
     date = models.DateTimeField(blank=True, null=True)
-    mib_filename = models.CharField(max_length=-1, blank=True, null=True)
-    sdk_filename = models.CharField(max_length=-1, blank=True, null=True)
+    mib_filename = models.CharField(max_length=255, blank=True, null=True)
+    sdk_filename = models.CharField(max_length=255, blank=True, null=True)
 
     def __str__(self):
         return '%s %s %s' % (self.iid, self.product, self.version)
@@ -192,4 +192,4 @@ class Product(models.Model):
     class Meta:
         managed = False
         db_table = 'product'
-        unique_together = (('iid', 'product', 'version', 'build'),)
+        #unique_together = (('iid', 'product', 'version', 'build'),)
