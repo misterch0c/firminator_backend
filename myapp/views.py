@@ -1,29 +1,17 @@
 import subprocess
 import unicodedata
-import os
+import os, fnmatch
 import tarfile
+import shlex    
+from subprocess import Popen, PIPE
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
 from django.http import HttpResponse
 from myapp.models import Image, Product, Brand
 from django.conf import settings
-
-
-
 import hashlib
-def io_md5(target):
-    """
-    Performs MD5 with a block size of 64kb.
-    """
-    blocksize = 65536
-    hasher = hashlib.md5()
-    with open(target, 'rb') as ifp:
-        buf = ifp.read(blocksize)
-        while buf:
-            hasher.update(buf)
-            buf = ifp.read(blocksize)
-        return hasher.hexdigest()
+
 
 
 def handle_uploaded_file(f, path):
@@ -40,11 +28,83 @@ def get_brand(brand):
     else:
         return b[0].id
 
+
+
+def run(cmd):
+  """Runs the given command locally and returns the output, err and exit_code."""
+  if "|" in cmd:    
+    cmd_parts = cmd.split('|')
+    print cmd_parts
+  else:
+    cmd_parts = []
+    cmd_parts.append(cmd)
+  i = 0
+  p = {}
+  for cmd_part in cmd_parts:
+    cmd_part = cmd_part.strip()
+    if i == 0:
+      p[i]=Popen(shlex.split(cmd_part),shell=False, stdin=None, stdout=PIPE, stderr=PIPE)
+    else:
+      p[i]=Popen(shlex.split(cmd_part), shell=False, stdin=p[i-1].stdout, stdout=PIPE, stderr=PIPE)
+    i = i +1
+  (output, err) = p[i-1].communicate()
+  exit_code = p[0].wait()
+
+  return str(output), str(err), exit_code
+
+
+def print_rez_cmd(exit_code,output,err):
+    if exit_code != 0:
+      print "Output:"
+      print output
+      print "Error:"
+      print exit_code
+      print err
+      # Handle error here
+    else:
+      # Be happy :D
+      print output
+
+
+
+def test(request):
+    path='/tmp/111'
+    os.chdir(path)
+
+    output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" "/tmp/111" | sort | uniq')
+    print_rez_cmd(exit_code,output,err)
+    output, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) "/tmp/111" | sort | uniq ')
+    print_rez_cmd(exit_code,output,err)
+
+    #fuck this one, some escaping error...comes from shlex I think
+    # output, err, exit_code = run('grep -sRIEoh "(http|https)://[^/""]+" "/tmp/111" | sort | uniq ')
+    # print_rez_cmd(exit_code,output,err)
+    return HttpResponse("wut")
+
+
+#lame find, probably won't use
+# def test(s): 
+#     path='/tmp/111'
+#     patterns=['*.conf','*.cfg','*.ini','*.db','*.sqlite','*psk','*.pem','*.crt','*cer','*.key']
+#     result = []
+#     result = []
+#     for root, dirs, files in os.walk(path):
+#         for name in files:
+#             if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
+#                 print root,name
+
+#     print result
+#     print "heey"
+#     return HttpResponse(result)
+
+
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
     fname=str(id)+'.tar.gz'
+    path='/tmp/'+fname
     tt = tarfile.open(settings.EXTRACTED_DIR+fname)
-    tt.extractall('/tmp/'+fname)
+    tt.extractall(path)
+    return path
 
 @csrf_exempt
 def upload(request):
@@ -62,7 +122,7 @@ def upload(request):
     f = request.FILES['file']
     path = settings.UPLOAD_DIR + f.name
     handle_uploaded_file(f, path)
-    md5 = io_md5(path)
+    md5 = Extractor.io_md5(path)
     brand=get_brand(brnd)
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
     image.save()
@@ -81,8 +141,3 @@ def upload(request):
     extract.extract()
     extract_tar_tmp(image.id)
     return HttpResponse("File uploaded // hash : %s" % md5)
-
-
-def test(request):
-    wut = settings.UPLOAD_DIR
-    return HttpResponse(wut)
