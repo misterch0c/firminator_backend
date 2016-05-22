@@ -72,14 +72,15 @@ do
 
     FILETYPE=$(file ${TARGETLOC})
 
-    echo -n "${TARGET}: "
+    #echo -n "${TARGET}: "
     getArch
     getEndian
 
     if [ -n "${ARCH}" ] && [ -n "${END}" ]
     then
         ARCHEND=${ARCH}${END}
-        echo ${ARCHEND}
+        echo ${ARCHEND} ${IID}
+
         psql -d firmware -U firmadyne -h 127.0.0.1 -q -c "UPDATE image SET arch = '$ARCHEND' WHERE id = $IID;"
 
         rm -fr "/tmp/${IID}"

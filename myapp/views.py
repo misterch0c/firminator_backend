@@ -146,6 +146,9 @@ def upload(request):
     os.chdir(settings.BASE_DIR)
     curimg=str(image.id)+".tar.gz"
     #run("./lib/getArch.sh ./extracted/"+curimg)
-    arch = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
-    print("Architecture: "+arch)
+    outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
+    res = outp.split()
+    print(res)
+    print("Architecture: "+res[0])
+    print("IID: "+res[1])
     return HttpResponse("File uploaded // hash : %s" % md5)
