@@ -3,6 +3,7 @@ import unicodedata
 import os, fnmatch
 import tarfile
 import shlex    
+from django.http import JsonResponse
 from subprocess import Popen, PIPE
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
@@ -57,9 +58,9 @@ def print_rez_cmd(exit_code,output,err):
     if exit_code != 0:
       print "Output:"
       print output
-      print "Error:"
-      print exit_code
-      print err
+      # print "Error:"
+      # print exit_code
+      # print err
       # Handle error here
     else:
       # Be happy :D
@@ -70,16 +71,17 @@ def print_rez_cmd(exit_code,output,err):
 def test(request):
     path='/tmp/111'
     os.chdir(path)
-
     output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" "/tmp/111" | sort | uniq')
     print_rez_cmd(exit_code,output,err)
-    output, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) "/tmp/111" | sort | uniq ')
-    print_rez_cmd(exit_code,output,err)
+    ips = output
+    output2, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) "/tmp/111" | sort | uniq ')
+    print_rez_cmd(exit_code,output2,err)
+    addy=output2
 
     #fuck this one, some escaping error...comes from shlex I think
     # output, err, exit_code = run('grep -sRIEoh "(http|https)://[^/""]+" "/tmp/111" | sort | uniq ')
     # print_rez_cmd(exit_code,output,err)
-    return HttpResponse("wut")
+    return JsonResponse({"ip": output, "mail":addy})
 
 
 #lame find, probably won't use
@@ -139,5 +141,11 @@ def upload(request):
     print(image.id)
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
     extract.extract()
-    extract_tar_tmp(image.id)
+    #extract_tar_tmp(image.id)
+
+    os.chdir(settings.BASE_DIR)
+    curimg=str(image.id)+".tar.gz"
+    #run("./lib/getArch.sh ./extracted/"+curimg)
+    arch = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
+    print("Architecture: "+arch)
     return HttpResponse("File uploaded // hash : %s" % md5)
