@@ -8,6 +8,7 @@ from subprocess import Popen, PIPE
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
+from lib.tar2db import tar2db
 from django.http import HttpResponse
 from myapp.models import Image, Product, Brand
 from django.conf import settings
@@ -148,6 +149,8 @@ def upload(request):
     #run("./lib/getArch.sh ./extracted/"+curimg)
     outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
     res = outp.split()
+
+    tar2db(str(image.id),'./extracted/'+curimg)
     print(res)
     print("Architecture: "+res[0])
     print("IID: "+res[1])
