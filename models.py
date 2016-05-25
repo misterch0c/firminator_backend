@@ -153,6 +153,9 @@ class Object(models.Model):
         db_table = 'object'
 
 
+
+
+
 class ObjectToImage(models.Model):
     oid = models.ForeignKey(Object, db_column='oid')
     iid = models.ForeignKey(Image, db_column='iid')

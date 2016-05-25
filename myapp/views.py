@@ -10,10 +10,10 @@ from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
 from lib.tar2db import tar2db
 from django.http import HttpResponse
-from myapp.models import Image, Product, Brand
+from myapp.models import Image, Product, Brand, ObjectToImage
 from django.conf import settings
 import hashlib
-
+from django.core import serializers
 
 
 def handle_uploaded_file(f, path):
@@ -67,7 +67,14 @@ def print_rez_cmd(exit_code,output,err):
       # Be happy :D
       print output
 
+def getfs(request):
+    myimg=Image(hash="51eddc7046d77a752ca4b39fbda50aff")
+    iid=255
+    fs = ObjectToImage(iid=myimg)
 
+    allObjects=serializers.serialize("json",ObjectToImage.objects.filter(iid=255))
+    print(allObjects)
+    return JsonResponse(allObjects, safe=False)
 
 def test(request):
     path='/tmp/111'

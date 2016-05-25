@@ -166,6 +166,9 @@ class ObjectToImage(models.Model):
     uid = models.IntegerField(blank=True, null=True)
     gid = models.IntegerField(blank=True, null=True)
 
+    def __str__(self):
+        return '%s %s %s' % (self.iid, self.filename, self.regular_file)
+
     class Meta:
         managed = False
         db_table = 'object_to_image'
