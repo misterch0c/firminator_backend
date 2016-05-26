@@ -143,7 +143,6 @@ class Image(models.Model):
 
     def __str__(self):
         return '%s %s %s' % (self.id, self.filename, self.hash)
-
     class Meta:
         managed = False
         db_table = 'image'
