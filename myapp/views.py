@@ -15,6 +15,7 @@ from django.conf import settings
 import hashlib
 from django.core import serializers
 import json
+from lib.util import parseFilesToHierarchy
 
 
 def handle_uploaded_file(f, path):
@@ -142,6 +143,7 @@ def upload(request):
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
     brand=get_brand(brnd)
+    print brand
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
@@ -167,6 +169,11 @@ def upload(request):
 
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
     # print(iid)
+
+    #Save hierarchy
+    hierarchy = parseFilesToHierarchy(files2oids, links)    
+    image.update(hierarchy = ', '.join([str(x) for x in hierarchy]))
+    image.save()
 
     for x in files2oids:
         oj = Object.objects.get(id=x[1])

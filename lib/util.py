@@ -1,40 +1,47 @@
 
+def _parseFiles(folders, result):
+    #lentgh minus 1 because the first element of array is '' since the string begins with '/'
+    length = len(folders)-1
+    current = 1
 
-def parseFilesToHierarchy(files):
-	result = []
+    tmpResult = result
+    #Parse folders (not the last one, which is normally a file)
+    while current < length:
 
-	for file in files:
-		folders = file["fields"]["filename"].split("/")
-		#lentgh minus 1 because the first element of array is '' since the string begins with '/'
-		length = len(folders)-1
-		current = 1
+        folder = folders[current]
+        tmp = None
+        for r in tmpResult:
+            if folder in r["name"]:
+                tmp = r
+                break
 
-		#Parse folders (not the last one, which is normally a file)
-		tmpResult = result
-		while current < length:
+        if not tmp:
+            tmp = {
+                "name": "/" + folder,
+                "children": [],
+                "type": "folder"
+            }
+            tmpResult.append(tmp)
 
-			folder = folders[current]
-			tmp = None
-			for r in tmpResult:
-				if folder in r["name"]:
-					tmp = r
-					break
+        tmpResult = tmp["children"]
+        current += 1
 
-			if not tmp:
-				tmp = {
-					"name": "/" + folder,
-					"children": [],
-					"type": "folder"
-				}
-				tmpResult.append(tmp)
+    #Parse the file itself (last one in path)
+    result.append({
+        "name": folders[current],
+        "type": "file"              
+    })
 
-			tmpResult = tmp["children"]
-			current += 1
 
-		#Parse the file itself (last one in path)
-		tmpResult.append({
-			"name": folders[current],
-			"type": "file"				
-		})
+def parseFilesToHierarchy(files, links):
+    result = []
 
-	return result
+    for file in files:
+        folders = file[0][0].split("/")
+        _parseFiles(folders, tmpResult)
+
+    for link in links:
+        folders = link[0].split("/")
+        _parseFiles(folders, tmpResult)
+
+    return result
