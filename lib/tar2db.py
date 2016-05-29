@@ -72,13 +72,15 @@ def process(iid, infile):
     fdict = dict([(h, (filename, uid, gid, mode)) \
             for (filename, h, uid, gid, mode) in files])
 
-    file2oid = [(fdict[h], oid) for (h, oid) in oids.iteritems()]
+    files2oids = [(fdict[h], oid) for (h, oid) in oids.iteritems()]
 
-    insertObjectToImage(iid, file2oid, links, cur)
+    #insertObjectToImage(iid, file2oid, links, cur)
 
     dbh.commit()
 
     dbh.close()
+    return iid, files2oids, links, cur
 
 def tar2db(iid,infile):
-    process(iid, infile)
+    iid, files2oids, links, cur = process(iid, infile)
+    return iid, files2oids, links, cur

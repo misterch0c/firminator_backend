@@ -151,6 +151,8 @@ class Image(models.Model):
 class Object(models.Model):
     hash = models.CharField(unique=True, max_length=255, blank=True, null=True)
 
+    def __str__(self):
+        return '%s' % (self.hash)
     class Meta:
         managed = False
         db_table = 'object'

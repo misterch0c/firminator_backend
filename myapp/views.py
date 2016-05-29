@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
 from lib.tar2db import tar2db
 from django.http import HttpResponse
-from myapp.models import Image, Product, Brand, ObjectToImage
+from myapp.models import Image, Product, Brand, ObjectToImage, Object
 from django.conf import settings
 import hashlib
 from django.core import serializers
@@ -72,7 +72,11 @@ def print_rez_cmd(exit_code,output,err):
 @csrf_exempt
 def getfs(request): 
     """ return filesystem for a given hash """
-    hsh = request.POST['hash']
+    hsh= json.loads(request.body).get('hash', None)
+    #hsh = request.POST['hash']
+
+    print request
+    print(hsh)
     myimg=Image.objects.filter(hash=hsh)
     print("retrieving fs for hash" + hsh)
     fs=ObjectToImage.objects.filter(iid=myimg)
@@ -161,8 +165,23 @@ def upload(request):
     outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
     res = outp.split()
 
-    tar2db(str(image.id),'./extracted/'+curimg)
-    print(res)
+    iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
+    # print(iid)
+
+    for x in files2oids:
+        oj = Object.objects.get(id=x[1])
+        imj = Image.objects.get(id=iid)
+        print x[1] 
+        ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
+        ojtimj.save()
+
+    for x in links:
+        oj2 = Object.objects.get(id=1)
+        imj2 = Image.objects.get(id=iid)
+        li = ObjectToImage(iid=imj2, oid=oj2, filename=x[0],regular_file=False)
+        li.save()
+
+
     print("Architecture: "+res[0])
     print("IID: "+res[1])
     return HttpResponse("File uploaded // hash : %s" % md5)
