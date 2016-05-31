@@ -15,6 +15,7 @@ from django.conf import settings
 import hashlib
 from django.core import serializers
 import json
+from lib.util import parseFilesToHierarchy
 
 
 def handle_uploaded_file(f, path):
@@ -52,7 +53,6 @@ def run(cmd):
     i = i +1
   (output, err) = p[i-1].communicate()
   exit_code = p[0].wait()
-
   return str(output), str(err), exit_code
 
 
@@ -65,7 +65,6 @@ def print_rez_cmd(exit_code,output,err):
       # print err
       # Handle error here
     else:
-      # Be happy :D
       print output
 
 
@@ -82,22 +81,23 @@ def getfs(request):
     fs=ObjectToImage.objects.filter(iid=myimg)
     allObjects=serializers.serialize("json",fs)
     jzz=json.loads(allObjects)
-    return JsonResponse(jzz, safe=False)
+    robin=parseFilesToHierarchy(jzz)
+    return JsonResponse(robin, safe=False)
 
 def test(request):
+    #path = request.POST['path']
     path='/tmp/111'
     os.chdir(path)
-    output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" "/tmp/111" | sort | uniq')
-    print_rez_cmd(exit_code,output,err)
-    ips = output
-    output2, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) "/tmp/111" | sort | uniq ')
-    print_rez_cmd(exit_code,output2,err)
-    addy=output2
+    output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path+' | sort | uniq')
+    output2, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) '+path+' | sort | uniq ')
+    ips=output.split()
+    addy=output2.split()
 
+    print(addy)
     #fuck this one, some escaping error...comes from shlex I think
     # output, err, exit_code = run('grep -sRIEoh "(http|https)://[^/""]+" "/tmp/111" | sort | uniq ')
     # print_rez_cmd(exit_code,output,err)
-    return JsonResponse({"ip": output, "mail":addy})
+    return JsonResponse({"ip": ips, "mail":addy})
 
 
 #lame find, probably won't use
@@ -184,8 +184,6 @@ def upload(request):
 
     #Add in db
     object_to_img(iid,files2oids,links)
-
-
 
     print("Architecture: "+res[0])
     print("IID: "+res[1])

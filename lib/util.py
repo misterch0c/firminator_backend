@@ -4,6 +4,7 @@ def parseFilesToHierarchy(files):
 	result = []
 
 	for file in files:
+		#print file
 		folders = file["fields"]["filename"].split("/")
 		#lentgh minus 1 because the first element of array is '' since the string begins with '/'
 		length = len(folders)-1
