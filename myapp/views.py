@@ -124,6 +124,21 @@ def extract_tar_tmp(id):
     tt.extractall(path)
     return path
 
+
+def object_to_img(iid,files2oids,links):
+        for x in files2oids:
+            oj = Object.objects.get(id=x[1])
+            imj = Image.objects.get(id=iid)
+            print x[1] 
+            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
+            ojtimj.save()
+
+        for x in links:
+            oj2 = Object.objects.get(id=1)
+            imj2 = Image.objects.get(id=iid)
+            li = ObjectToImage(iid=imj2, oid=oj2, filename=x[0],regular_file=False)
+            li.save()  
+
 @csrf_exempt
 def upload(request):
     desc = request.POST['description']
@@ -166,20 +181,10 @@ def upload(request):
     res = outp.split()
 
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
-    # print(iid)
 
-    for x in files2oids:
-        oj = Object.objects.get(id=x[1])
-        imj = Image.objects.get(id=iid)
-        print x[1] 
-        ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
-        ojtimj.save()
+    #Add in db
+    object_to_img(iid,files2oids,links)
 
-    for x in links:
-        oj2 = Object.objects.get(id=1)
-        imj2 = Image.objects.get(id=iid)
-        li = ObjectToImage(iid=imj2, oid=oj2, filename=x[0],regular_file=False)
-        li.save()
 
 
     print("Architecture: "+res[0])
