@@ -140,10 +140,10 @@ class Image(models.Model):
     kernel_extracted = models.NullBooleanField()
     arch = models.CharField(max_length=255, blank=True, null=True)
     kernel_version = models.CharField(max_length=255, blank=True, null=True)
-    hierarchy = models.TextField(blank = True, null = True)
+    hierarchy = models.TextField(max_length=255, blank = True, null = True)
 
     def __str__(self):
-        return '%s %s %s' % (self.id, self.filename, self.hash)
+        return '%s %s %s %s' % (self.id, self.filename, self.hash,self.hierarchy)
     class Meta:
         managed = False
         db_table = 'image'

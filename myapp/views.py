@@ -32,8 +32,6 @@ def get_brand(brand):
     else:
         return b[0].id
 
-
-
 def run(cmd):
   """Runs the given command locally and returns the output, err and exit_code."""
   if "|" in cmd:    
@@ -76,28 +74,33 @@ def getfs(request):
 
     print request
     print(hsh)
-    myimg=Image.objects.filter(hash=hsh)
+
+    myimg=Image.objects.get(hash=hsh)
     print("retrieving fs for hash" + hsh)
     fs=ObjectToImage.objects.filter(iid=myimg)
     allObjects=serializers.serialize("json",fs)
     jzz=json.loads(allObjects)
-    robin=parseFilesToHierarchy(jzz)
-    return JsonResponse(robin, safe=False)
+    #robin=parseFilesToHierarchy(jzz)
+    #print(myimg.values('hierarchy'))
+    print(myimg.hierarchy)
+    #jz=json.loads("dd")
+    return JsonResponse(myimg.hierarchy, safe=False)
 
+#grep in fs 
 def test(request):
     #path = request.POST['path']
     path='/tmp/111'
     os.chdir(path)
     output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path+' | sort | uniq')
     output2, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) '+path+' | sort | uniq ')
+    #this one won't work with the pipe between http/s : (
+    output3, err, exit_code = run('grep -sRIEoh "(http|https)://[^/"]+" '+path+' | sort | uniq ')
+
     ips=output.split()
     addy=output2.split()
-
+    uri=output3.split()
     print(addy)
-    #fuck this one, some escaping error...comes from shlex I think
-    # output, err, exit_code = run('grep -sRIEoh "(http|https)://[^/""]+" "/tmp/111" | sort | uniq ')
-    # print_rez_cmd(exit_code,output,err)
-    return JsonResponse({"ip": ips, "mail":addy})
+    return JsonResponse({"ip": ips, "mail":addy,"url":uri})
 
 
 #lame find, probably won't use
@@ -157,7 +160,7 @@ def upload(request):
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
     brand=get_brand(brnd)
-    print brand
+    print("Brand: " + brand)
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
@@ -169,27 +172,30 @@ def upload(request):
     # print product
 
     #rootfs=True, parallel=False, ,kernel=False, 
-    print(brand)
-    print(image.id)
+    print("Image ID: "+image.id)
+
+    #Extract filesystem from firmware file
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
     extract.extract()
+
+    #To decompress .tar.gz in /tmp
     #extract_tar_tmp(image.id)
 
     os.chdir(settings.BASE_DIR)
     curimg=str(image.id)+".tar.gz"
-    #run("./lib/getArch.sh ./extracted/"+curimg)
+    
+    #Get architecture and add it in db 
     outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
     res = outp.split()
-
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
 
-    # print(iid)
-
-    #Save hierarchy
+    #Get file hierarchy and save it in db
     hierarchy = parseFilesToHierarchy(files2oids, links)    
-    image.update(hierarchy = ', '.join([str(x) for x in hierarchy]))
+    print(hierarchy)
+    image.hierarchy = ', '.join([str(x) for x in hierarchy])
     image.save()
-    #Add in db
+
+    #Add filenames/path in db
     object_to_img(iid,files2oids,links)
 
     print("Architecture: "+res[0])

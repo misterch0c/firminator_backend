@@ -26,7 +26,7 @@ def _parseFiles(folders, result):
         current += 1
 
     #Parse the file itself (last one in path)
-    result.append({
+    tmpResult.append({
         "name": folders[current],
         "type": "file"              
     })
@@ -34,13 +34,14 @@ def _parseFiles(folders, result):
 
 def parseFilesToHierarchy(files, links):
     result = []
+    tmpResult = []
 
     for file in files:
         folders = file[0][0].split("/")
-        _parseFiles(folders, tmpResult)
+        _parseFiles(folders, result)
 
     for link in links:
         folders = link[0].split("/")
-        _parseFiles(folders, tmpResult)
+        _parseFiles(folders, result)
 
     return result
