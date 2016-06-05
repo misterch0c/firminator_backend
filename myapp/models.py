@@ -167,6 +167,8 @@ class ObjectToImage(models.Model):
     permissions = models.IntegerField(blank=True, null=True)
     uid = models.IntegerField(blank=True, null=True)
     gid = models.IntegerField(blank=True, null=True)
+    content = models.TextField(null=True) #new field for file content
+
 
     def __str__(self):
         return '%s %s %s' % (self.iid, self.filename, self.regular_file)

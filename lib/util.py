@@ -10,7 +10,7 @@ def _parseFiles(folders, result):
         folder = folders[current]
         tmp = None
         for r in tmpResult:
-            if folder in r["name"]:
+            if "/" + folder == r["name"]:
                 tmp = r
                 break
 

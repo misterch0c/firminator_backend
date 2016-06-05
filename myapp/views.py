@@ -82,7 +82,7 @@ def getfs(request):
     jzz=json.loads(allObjects)
     #robin=parseFilesToHierarchy(jzz)
     #print(myimg.values('hierarchy'))
-    print(myimg.hierarchy)
+    #print(myimg.hierarchy)
     #jz=json.loads("dd")
     return JsonResponse(myimg.hierarchy, safe=False)
 
@@ -103,21 +103,47 @@ def test(request):
     return JsonResponse({"ip": ips, "mail":addy,"url":uri})
 
 
-#lame find, probably won't use
-# def test(s): 
-#     path='/tmp/111'
-#     patterns=['*.conf','*.cfg','*.ini','*.db','*.sqlite','*psk','*.pem','*.crt','*cer','*.key']
-#     result = []
-#     result = []
-#     for root, dirs, files in os.walk(path):
-#         for name in files:
-#             if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
-#                 print root,name
+def find_treasures(image): 
+    path='/tmp/111'
+    patterns=['passwd','shadow','*.conf','*.cfg','*.ini','*.db','*.sqlite','*psk','*.pem','*.crt','*cer','*.key']
+    result = []
+    for root, dirs, files in os.walk(path):
+        for name in files:
+            if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
+                tmppath=root+"/"+name
+                goodpath="/"+os.path.relpath(tmppath, '/tmp/111')
+                print(goodpath)
+                result.append(goodpath)
+    #print result
+    print('pppppp')
+    print(result)
+    rez=parse_treasures(result)
+    save_treasures(rez,image)
 
-#     print result
-#     print "heey"
-#     return HttpResponse(result)
+def parse_treasures(result):
+    print('oooo')
+    print(result)
+    patterns=['*.conf','*.txt','/etc/shadow','/etc/passwd']
+    result2=[]
+    for filename in result:
+        if any(fnmatch.fnmatch(filename,pattern) for pattern in patterns):
+            print('_________')
+            print(filename)
+            result2.append(filename)
+    print(result2)
+    return result2
 
+
+def save_treasures(treasures,image):
+    for filename in treasures:
+        print('-//--')
+        print(filename)
+        ojti=ObjectToImage.objects.get(iid=image,filename=filename)
+        fo = open("/tmp/111"+filename, "r")
+        #Add file content to db here (need to add a field)
+        print(fo.read())
+        fo.close()
+    print treasures
 
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
@@ -132,7 +158,7 @@ def object_to_img(iid,files2oids,links):
         for x in files2oids:
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
-            print x[1] 
+           # print x[1] 
             ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
             ojtimj.save()
 
@@ -160,7 +186,7 @@ def upload(request):
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
     brand=get_brand(brnd)
-    print("Brand: " + brand)
+    print("Brand: " + str(brand))
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
@@ -172,7 +198,7 @@ def upload(request):
     # print product
 
     #rootfs=True, parallel=False, ,kernel=False, 
-    print("Image ID: "+image.id)
+    print("Image ID: "+str(image.id))
 
     #Extract filesystem from firmware file
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
@@ -191,12 +217,16 @@ def upload(request):
 
     #Get file hierarchy and save it in db
     hierarchy = parseFilesToHierarchy(files2oids, links)    
-    print(hierarchy)
+    #print(hierarchy)
     image.hierarchy = ', '.join([str(x) for x in hierarchy])
     image.save()
 
     #Add filenames/path in db
     object_to_img(iid,files2oids,links)
+
+    find_treasures(image)
+
+
 
     print("Architecture: "+res[0])
     print("IID: "+res[1])
