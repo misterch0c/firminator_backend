@@ -23,4 +23,5 @@ urlpatterns = [
     url(r'^file/', views.upload),
     url(r'^brand/', views.get_brand),
     url(r'^getfs/', views.getfs),
+    url(r'^grepfs/', views.grepfs),
 ]

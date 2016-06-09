@@ -10,12 +10,14 @@ from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
 from lib.tar2db import tar2db
 from django.http import HttpResponse
-from myapp.models import Image, Product, Brand, ObjectToImage, Object
+from myapp.models import Image, Product, Brand, ObjectToImage, Object, Treasure
 from django.conf import settings
 import hashlib
 from django.core import serializers
 import json
 from lib.util import parseFilesToHierarchy
+from django.core.files import File
+
 
 
 def handle_uploaded_file(f, path):
@@ -34,12 +36,13 @@ def get_brand(brand):
 
 def run(cmd):
   """Runs the given command locally and returns the output, err and exit_code."""
-  if "|" in cmd:    
-    cmd_parts = cmd.split('|')
-    print cmd_parts
-  else:
-    cmd_parts = []
-    cmd_parts.append(cmd)
+  # if "|" in cmd:    
+  #   cmd_parts = cmd.split('|')
+  #   print cmd_parts
+  # else:
+  #   cmd_parts = []
+  #   cmd_parts.append(cmd)
+  cmd_parts=cmd
   i = 0
   p = {}
   for cmd_part in cmd_parts:
@@ -80,28 +83,37 @@ def getfs(request):
     fs=ObjectToImage.objects.filter(iid=myimg)
     allObjects=serializers.serialize("json",fs)
     jzz=json.loads(allObjects)
-    #robin=parseFilesToHierarchy(jzz)
-    #print(myimg.values('hierarchy'))
-    #print(myimg.hierarchy)
-    #jz=json.loads("dd")
     return JsonResponse(myimg.hierarchy, safe=False)
 
-#grep in fs 
-def test(request):
+#grep in filesystem for passwords, emails.. and add it in database
+def grepfs(img):
+
+
     #path = request.POST['path']
+    myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
     path='/tmp/111'
     os.chdir(path)
-    output, err, exit_code = run('grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path+' | sort | uniq')
-    output2, err, exit_code = run('grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) '+path+' | sort | uniq ')
-    #this one won't work with the pipe between http/s : (
-    output3, err, exit_code = run('grep -sRIEoh "(http|https)://[^/"]+" '+path+' | sort | uniq ')
+
+
+    arg1=['grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path,'sort','uniq']
+    output, err, exit_code = run(arg1)
+    arg2=['grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) '+path,'sort','uniq']
+    output2, err, exit_code = run(arg2)
+    #had to modify run because of the | in the third one
+    arg3=['grep -sRIEoh "(http|https)://[^/]+" '+path,'sort','uniq']
+    output3, err, exit_code = run(arg3)
 
     ips=output.split()
     addy=output2.split()
-    uri=output3.split()
-    print(addy)
-    return JsonResponse({"ip": ips, "mail":addy,"url":uri})
+    uris=output3.split()
+    t=Treasure(oid=myimg, ip=ips, mail=addy, uri=uris)
+    t.save()
+    print(uris)
+    return JsonResponse({"ip": ips, "mail":addy, "uri":uris })
 
+def test(request):
+
+    return "sup"
 
 def find_treasures(image): 
     path='/tmp/111'
@@ -135,14 +147,14 @@ def parse_treasures(result):
 
 
 def save_treasures(treasures,image):
+    fnames=[]
     for filename in treasures:
         print('-//--')
         print(filename)
-        ojti=ObjectToImage.objects.get(iid=image,filename=filename)
-        fo = open("/tmp/111"+filename, "r")
-        #Add file content to db here (need to add a field)
-        print(fo.read())
-        fo.close()
+        #fo = open("/tmp/111"+filename, "r").read()
+        fnames.append(filename)
+        #Should reference object_to_url instead of filename...
+    t=Treasure.objects.update_or_create(oid=image,files=fnames)
     print treasures
 
 #Decompress extracted in tmp for analysis
@@ -225,6 +237,7 @@ def upload(request):
     object_to_img(iid,files2oids,links)
 
     find_treasures(image)
+    grepfs(image)
 
 
 

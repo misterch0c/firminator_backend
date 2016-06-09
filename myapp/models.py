@@ -149,6 +149,19 @@ class Image(models.Model):
         db_table = 'image'
 
 
+class Treasure(models.Model):
+    oid = models.ForeignKey(Image, db_column='oid',default=None)
+    ip = models.TextField(unique=True, blank=True, null=True)
+    mail = models.TextField(unique=True, blank=True, null=True)
+    uri = models.TextField(unique=True, blank=True, null=True)
+    files = models.TextField(unique=True, blank=True, null=True)
+
+    def __str__(self):
+        return '%s' % (self.ip)
+    class Meta:
+        managed = True
+        db_table = 'treasure'
+
 class Object(models.Model):
     hash = models.CharField(unique=True, max_length=255, blank=True, null=True)
 
