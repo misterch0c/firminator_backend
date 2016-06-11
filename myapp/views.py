@@ -85,12 +85,31 @@ def getfs(request):
     jzz=json.loads(allObjects)
     return JsonResponse(myimg.hierarchy, safe=False)
 
+@csrf_exempt
+def getTreasures(request): 
+    """ return treasures for a given hash """
+    hsh= json.loads(request.body).get('hash', None)
+    #hsh = request.POST['hash']
+
+    print request
+    print(hsh)
+
+    myimg=Image.objects.get(hash=hsh)
+    print("retrieving trasures for hash" + hsh)
+    tr=Treasure.objects.get(oid=myimg)
+    print(tr)
+
+    return JsonResponse({"files":tr.files}, safe=False)
+
+
+
 #grep in filesystem for passwords, emails.. and add it in database
 def grepfs(img):
 
 
     #path = request.POST['path']
-    myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
+    #myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
+    myimg=img
     path='/tmp/111'
     os.chdir(path)
 
@@ -106,7 +125,12 @@ def grepfs(img):
     ips=output.split()
     addy=output2.split()
     uris=output3.split()
-    t=Treasure(oid=myimg, ip=ips, mail=addy, uri=uris)
+    #t=Treasure.objects.update_or_create(oid=myimg, ip=ips, mail=addy, uri=uris)
+    #why is update or create not working? : ( let's assume it's already created for now...
+    t=Treasure.objects.get(oid=img)
+    t.ips=ips
+    t.mail=addy
+    t.uri=uris
     t.save()
     print(uris)
     return JsonResponse({"ip": ips, "mail":addy, "uri":uris })
@@ -147,13 +171,11 @@ def parse_treasures(result):
 
 
 def save_treasures(treasures,image):
-    fnames=[]
-    for filename in treasures:
-        print('-//--')
-        print(filename)
-        #fo = open("/tmp/111"+filename, "r").read()
-        fnames.append(filename)
-        #Should reference object_to_url instead of filename...
+    fnames=""
+
+    #fo = open("/tmp/111"+filename, "r").read()
+    fnames = ', '.join([str(x) for x in treasures])
+    #Should reference object_to_url instead of filename...
     t=Treasure.objects.update_or_create(oid=image,files=fnames)
     print treasures
 
