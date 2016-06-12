@@ -154,7 +154,6 @@ class Treasure(models.Model):
     ip = models.TextField(unique=True, blank=True, null=True)
     mail = models.TextField(unique=True, blank=True, null=True)
     uri = models.TextField(unique=True, blank=True, null=True)
-    files = models.TextField(unique=True, blank=True, null=True)
 
     def __str__(self):
         return '%s' % (self.ip)
@@ -181,13 +180,14 @@ class ObjectToImage(models.Model):
     uid = models.IntegerField(blank=True, null=True)
     gid = models.IntegerField(blank=True, null=True)
     content = models.TextField(null=True) #new field for file content
+    treasure = models.BooleanField(default=False)
 
 
     def __str__(self):
         return '%s %s %s' % (self.iid, self.filename, self.regular_file)
 
     class Meta:
-        managed = False
+        managed = True
         db_table = 'object_to_image'
         #unique_together = (('oid', 'iid', 'filename'),)
 

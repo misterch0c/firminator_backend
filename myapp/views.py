@@ -98,21 +98,33 @@ def getTreasures(request):
     print("retrieving trasures for hash" + hsh)
     tr=Treasure.objects.get(oid=myimg)
     print(tr)
+    filescont=getFileContent(tr.files)
 
-    return JsonResponse({"files":tr.files}, safe=False)
+    return JsonResponse({"files":tr.files,"content":filescont}, safe=False)
+
+def getFileContent(filenames):
+    """For now let's just take some file in tmp but later the files should be on aws or something"""
+    path='/tmp/111'
+    os.chdir(path)
+    rez={}
+    for fn in filenames.split(","):
+        print(path+fn)
+        content=open(path+fn,'r')
+        rez[fn]=content.read()
+    print(rez)
+    return rez
+
 
 
 
 #grep in filesystem for passwords, emails.. and add it in database
 def grepfs(img):
-
-
+    print("--grepfs--")
     #path = request.POST['path']
     #myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
     myimg=img
     path='/tmp/111'
     os.chdir(path)
-
 
     arg1=['grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path,'sort','uniq']
     output, err, exit_code = run(arg1)
@@ -125,15 +137,15 @@ def grepfs(img):
     ips=output.split()
     addy=output2.split()
     uris=output3.split()
-    #t=Treasure.objects.update_or_create(oid=myimg, ip=ips, mail=addy, uri=uris)
-    #why is update or create not working? : ( let's assume it's already created for now...
-    t=Treasure.objects.get(oid=img)
-    t.ips=ips
-    t.mail=addy
-    t.uri=uris
+
+    t, created=Treasure.objects.get_or_create(oid=img)
+    t.ip=', '.join([str(x) for x in ips])
+    t.mail=', '.join([str(x) for x in addy])
+    t.uri=', '.join([str(x) for x in uris])
     t.save()
-    print(uris)
+
     return JsonResponse({"ip": ips, "mail":addy, "uri":uris })
+
 
 def test(request):
 
@@ -151,8 +163,8 @@ def find_treasures(image):
                 print(goodpath)
                 result.append(goodpath)
     #print result
-    print('pppppp')
-    print(result)
+    print('find treasures')
+    #print(result)
     rez=parse_treasures(result)
     save_treasures(rez,image)
 
@@ -163,10 +175,10 @@ def parse_treasures(result):
     result2=[]
     for filename in result:
         if any(fnmatch.fnmatch(filename,pattern) for pattern in patterns):
-            print('_________')
-            print(filename)
+            # print('_________')
+            # print(filename)
             result2.append(filename)
-    print(result2)
+    #print(result2)
     return result2
 
 
@@ -174,10 +186,14 @@ def save_treasures(treasures,image):
     fnames=""
 
     #fo = open("/tmp/111"+filename, "r").read()
-    fnames = ', '.join([str(x) for x in treasures])
-    #Should reference object_to_url instead of filename...
-    t=Treasure.objects.update_or_create(oid=image,files=fnames)
-    print treasures
+    print('save treasures')
+    for fname in treasures:
+        ojj=ObjectToImage.objects.get(iid=image,filename=fname)
+        ojj.treasure=True
+        ojj.save()
+        print(ojj.filename)
+        #t=Treasure.objects.update_or_create(oid=image,files=fnames)
+        #print ojj
 
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
