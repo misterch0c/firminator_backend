@@ -96,21 +96,25 @@ def getTreasures(request):
 
     myimg=Image.objects.get(hash=hsh)
     print("retrieving trasures for hash" + hsh)
-    tr=Treasure.objects.get(oid=myimg)
-    print(tr)
-    filescont=getFileContent(tr.files)
+    trz=Treasure.objects.get(oid=myimg)
+    tr=ObjectToImage.objects.filter(treasure=True)
+    fnames=[]
+    for trez in tr:
+        fnames.append(trez.filename)
+    print fnames
+    filescont=getFileContent(fnames)
 
-    return JsonResponse({"files":tr.files,"content":filescont}, safe=False)
+    return JsonResponse({"ips":trz.ip.split(","),"mail":trz.mail.split(","),"filenames":fnames,"fileContent":filescont}, safe=False)
 
 def getFileContent(filenames):
     """For now let's just take some file in tmp but later the files should be on aws or something"""
     path='/tmp/111'
     os.chdir(path)
-    rez={}
-    for fn in filenames.split(","):
+    rez=[]
+    for fn in filenames:
         print(path+fn)
         content=open(path+fn,'r')
-        rez[fn]=content.read()
+        rez.append(content.read())
     print(rez)
     return rez
 
