@@ -19,10 +19,6 @@ from myapp import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^test/', views.test),
     url(r'^file/', views.upload),
-    url(r'^brand/', views.get_brand),
-    url(r'^getfs/', views.getfs),
-    url(r'^getfs/', views.getfs),
-    url(r'^getTreasures/', views.getTreasures),
+    url(r'^getAnalysis/', views.getAnalysis),
 ]

@@ -34,15 +34,8 @@ def get_brand(brand):
     else:
         return b[0].id
 
-def run(cmd):
+def run(cmd_parts):
   """Runs the given command locally and returns the output, err and exit_code."""
-  # if "|" in cmd:    
-  #   cmd_parts = cmd.split('|')
-  #   print cmd_parts
-  # else:
-  #   cmd_parts = []
-  #   cmd_parts.append(cmd)
-  cmd_parts=cmd
   i = 0
   p = {}
   for cmd_part in cmd_parts:
@@ -68,31 +61,14 @@ def print_rez_cmd(exit_code,output,err):
     else:
       print output
 
-
 @csrf_exempt
-def getfs(request): 
-    """ return filesystem for a given hash """
-    hsh= json.loads(request.body).get('hash', None)
-    #hsh = request.POST['hash']
-
-    print request
-    print(hsh)
-
-    myimg=Image.objects.get(hash=hsh)
-    print("retrieving fs for hash" + hsh)
-    fs=ObjectToImage.objects.filter(iid=myimg)
-    allObjects=serializers.serialize("json",fs)
-    jzz=json.loads(allObjects)
-    return JsonResponse(myimg.hierarchy, safe=False)
-
-@csrf_exempt
-def getTreasures(request): 
+def getAnalysis(request): 
     """ return treasures for a given hash """
     hsh= json.loads(request.body).get('hash', None)
     #hsh = request.POST['hash']
 
     print request
-    print(hsh)
+    #print(hsh)
 
     myimg=Image.objects.get(hash=hsh)
     print("retrieving trasures for hash" + hsh)
@@ -101,10 +77,13 @@ def getTreasures(request):
     fnames=[]
     for trez in tr:
         fnames.append(trez.filename)
-    print fnames
+    #print fnames
     filescont=getFileContent(fnames)
 
-    return JsonResponse({"ips":trz.ip.split(","),"mail":trz.mail.split(","),"filenames":fnames,"fileContent":filescont}, safe=False)
+    return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
+        "ips":trz.ip.split(","),"mail":trz.mail.split(","),"filenames":fnames,
+        "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
+        "fileContent":filescont}, safe=False)
 
 def getFileContent(filenames):
     """For now let's just take some file in tmp but later the files should be on aws or something"""
@@ -112,10 +91,10 @@ def getFileContent(filenames):
     os.chdir(path)
     rez=[]
     for fn in filenames:
-        print(path+fn)
+        #print(path+fn)
         content=open(path+fn,'r')
         rez.append(content.read())
-    print(rez)
+    #print(rez)
     return rez
 
 
@@ -188,16 +167,12 @@ def parse_treasures(result):
 
 def save_treasures(treasures,image):
     fnames=""
-
-    #fo = open("/tmp/111"+filename, "r").read()
     print('save treasures')
     for fname in treasures:
         ojj=ObjectToImage.objects.get(iid=image,filename=fname)
         ojj.treasure=True
         ojj.save()
         print(ojj.filename)
-        #t=Treasure.objects.update_or_create(oid=image,files=fnames)
-        #print ojj
 
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
@@ -280,8 +255,6 @@ def upload(request):
 
     find_treasures(image)
     grepfs(image)
-
-
 
     print("Architecture: "+res[0])
     print("IID: "+res[1])
