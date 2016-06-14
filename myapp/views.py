@@ -20,6 +20,27 @@ from django.core.files import File
 
 
 
+
+        # -=Making Pasta=-
+
+
+        #                                                      |||
+        #                                                      |||||,
+        #                                                     \|||||/
+        #                    /)                               `|||||/
+        #               ,-""//-. ______                       |`"""'|
+        #            ==|`-.//.-'|,-----'======================|  P  |====
+        #              |        |---,---,  .---,((--------.   |  A  |
+        #              |        |  /(_)/  /   (()))` ;'", \   |  S  |
+        #              `-.____.-' /_  /  /  /| `;',`;; ,/( \  |  T  |
+        #                        /(_)/  /  //  ; ` "  ((()) \ |  A  |
+        #              .-::-.   /_  /  /  /)   "' ;" ; `;"'  \`-...-'
+        #             (::::::) /(_)/   `=//==================='  
+        #              `-::-' /   /     (/
+        #          ----------'---'
+
+
+
 def handle_uploaded_file(f, path):
     with open(path, 'wb+') as destination:
         for chunk in f.chunks():
@@ -66,7 +87,7 @@ def getAnalysis(request):
     """ return treasures for a given hash """
     hsh= json.loads(request.body).get('hash', None)
     #hsh = request.POST['hash']
-
+    juicy=[]
     print request
     #print(hsh)
 
@@ -79,9 +100,13 @@ def getAnalysis(request):
         fnames.append(trez.filename)
     #print fnames
     filescont=getFileContent(fnames)
+    juicy.append(trz.ip)
+    juicy.append(trz.mail)
+    juicy.append(trz.uri)
+
 
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
-        "ips":trz.ip.split(","),"mail":trz.mail.split(","),"filenames":fnames,
+        "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
         "fileContent":filescont}, safe=False)
 
