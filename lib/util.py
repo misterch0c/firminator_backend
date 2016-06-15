@@ -1,5 +1,7 @@
-def _parseFiles(folders, result):
+def _parseFiles(file, result):
     #lentgh minus 1 because the first element of array is '' since the string begins with '/'
+    
+    folders = file.filename.split("/")
     length = len(folders)-1
     current = 1
 
@@ -18,7 +20,8 @@ def _parseFiles(folders, result):
             tmp = {
                 "name": "/" + folder,
                 "children": [],
-                "type": "folder"
+                "type": "folder",
+                "id": file.id
             }
             tmpResult.append(tmp)
 
@@ -32,16 +35,13 @@ def _parseFiles(folders, result):
     })
 
 
-def parseFilesToHierarchy(files, links):
+def parseFilesToHierarchy(files):
     result = []
     tmpResult = []
 
     for file in files:
-        folders = file[0][0].split("/")
-        _parseFiles(folders, result)
+        #folders = file[0][0].split("/")
+        _parseFiles(file, result)
 
-    for link in links:
-        folders = link[0].split("/")
-        _parseFiles(folders, result)
 
     return result

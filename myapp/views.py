@@ -209,18 +209,22 @@ def extract_tar_tmp(id):
 
 
 def object_to_img(iid,files2oids,links):
+        links = []
         for x in files2oids:
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
            # print x[1] 
             ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
             ojtimj.save()
+            links.append(ojtimj)
 
         for x in links:
             oj2 = Object.objects.get(id=1)
             imj2 = Image.objects.get(id=iid)
             li = ObjectToImage(iid=imj2, oid=oj2, filename=x[0],regular_file=False)
             li.save()  
+            links.append(li)
+        return links
 
 @csrf_exempt
 def upload(request):
@@ -269,14 +273,15 @@ def upload(request):
     res = outp.split()
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
 
-    #Get file hierarchy and save it in db
-    hierarchy = parseFilesToHierarchy(files2oids, links)    
-    #print(hierarchy)
-    image.hierarchy = ', '.join([str(x) for x in hierarchy])
-    image.save()
 
     #Add filenames/path in db
-    object_to_img(iid,files2oids,links)
+    files = object_to_img(iid,files2oids,links)
+
+    #Get file hierarchy and save it in db
+    hierarchy = parseFilesToHierarchy(files)    
+    #print(hierarchy)
+    image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
+    image.save()
 
     find_treasures(image)
     grepfs(image)
