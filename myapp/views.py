@@ -114,7 +114,7 @@ def getAnalysis(request):
 def getFileById(request,id): 
     """ To get more information about a particular file """
     oj=ObjectToImage.objects.get(id=id)
-    return JsonResponse({"id":oj.id, "permissions":oj.permissions, "gid":oj.gid, "uid":oj.uid})
+    return JsonResponse({"id":oj.id, "permissions":oj.permissions, "gid":oj.gid, "uid":oj.uid, "r2i":oj.r2i})
 
 
 def getFileContent(filenames):
