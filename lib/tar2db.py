@@ -8,6 +8,7 @@ import hashlib
 import psycopg2
 import r2pipe
 import unicodedata
+import mimetypes
 
 def getFileHashes(infile):
     t = tarfile.open(infile)
@@ -64,11 +65,13 @@ def createObjects(hashes, cur):
 #                             for x in links])
 
 def isBinary(filename):
-
-#This is not good enough
-    textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
-    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
-    return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
+    #TODO return true for specific type like 'application/octet-stream' ...
+    if mimetypes.guess_type(filename)[0] is None:
+        return True
+    return False
+    # textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
+    # is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
+    # return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
 
 
 def radare_kungfu(files):
