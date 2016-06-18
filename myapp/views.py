@@ -222,7 +222,7 @@ def object_to_img(iid,files2oids,links):
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
            # print x[1] 
-            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
+            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4])
             ojtimj.save()
             files.append(ojtimj)
 
@@ -251,6 +251,11 @@ def upload(request):
     path = settings.UPLOAD_DIR + f.name
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
+
+    if md5 == "51eddc7046d77a752ca4b39fbda50aff":
+        print "[testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
+        Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
+
     brand=get_brand(brnd)
     print("Brand: " + str(brand))
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)

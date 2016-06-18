@@ -7,6 +7,7 @@ import re
 import hashlib
 import psycopg2
 import r2pipe
+import unicodedata
 
 def getFileHashes(infile):
     t = tarfile.open(infile)
@@ -15,8 +16,9 @@ def getFileHashes(infile):
     for f in t.getmembers():
         if f.isfile():
             # we use f.name[1:] to get rid of the . at the beginning of the path
-            files.append((f.name[1:], hashlib.md5(t.extractfile(f).read()).hexdigest(),
-                          f.uid, f.gid, f.mode))
+            fi = list()
+            fi.extend([f.name[1:], hashlib.md5(t.extractfile(f).read()).hexdigest(),f.uid, f.gid, f.mode, None])
+            files.append(fi)
         elif f.issym():
             links.append((f.name[1:], f.linkpath))
     return (files, links)
@@ -70,12 +72,14 @@ def isBinary(filename):
 
 
 def radare_kungfu(files):
-    for filename in files:
-        if isBinary(filename[0]):
-            print("File is binary, running radare & saving result to database")
-            r2=r2pipe.open("/tmp/111"+filename[0])
+    for fi in files:
+        filename = fi[0]
+        if isBinary(filename):
+            #print("File is binary, running radare & saving result to database")
+            r2=r2pipe.open("/tmp/111"+filename)
             r2.cmd("s 0")
-            print(r2.cmd("i"))
+            r2i = r2.cmd("i")
+            fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
     return
 
 
@@ -88,14 +92,16 @@ def process(iid, infile):
 
     oids = getOids(files, cur)
 
-    fdict = dict([(h, (filename, uid, gid, mode)) \
-            for (filename, h, uid, gid, mode) in files])
+    radare_kungfu(files)
+    print("----------")
+
+    #x[1] == hash in files
+    fdict = dict([(x[1], (x[0], x[2], x[3], x[4], x[5])) \
+            for x in files])
 
     files2oids = [(fdict[h], oid) for (h, oid) in oids.iteritems()]
 
     #insertObjectToImage(iid, file2oid, links, cur)
-    radare_kungfu(files)
-    print("----------")
 
     dbh.commit()
 

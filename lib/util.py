@@ -1,6 +1,5 @@
 def _parseFiles(file, result):
     #lentgh minus 1 because the first element of array is '' since the string begins with '/'
-    #print(file)
     folders = file.filename.split("/")
     length = len(folders)-1
     current = 1
