@@ -20,7 +20,6 @@ from django.core.files import File
 
 
 
-
         # -=Making Pasta=-
 
 
@@ -110,6 +109,14 @@ def getAnalysis(request):
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
         "fileContent":filescont}, safe=False)
 
+
+@csrf_exempt
+def getFileById(request,id): 
+    """ To get more information about a particular file """
+    oj=ObjectToImage.objects.get(id=id)
+    return JsonResponse({"id":oj.id, "permissions":oj.permissions, "gid":oj.gid, "uid":oj.uid})
+
+
 def getFileContent(filenames):
     """For now let's just take some file in tmp but later the files should be on aws or something"""
     path='/tmp/111'
@@ -134,6 +141,7 @@ def grepfs(img):
     path='/tmp/111'
     os.chdir(path)
 
+    #TODO: remove all useless ip like broadcast & find a way to get the file/path too
     arg1=['grep -sRIEho "[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}" '+path,'sort','uniq']
     output, err, exit_code = run(arg1)
     arg2=['grep -sRIEoh ([[:alnum:]_.-]+@[[:alnum:]_.-]+?\.[[:alpha:].]{2,6}) '+path,'sort','uniq']
@@ -197,7 +205,7 @@ def save_treasures(treasures,image):
         ojj=ObjectToImage.objects.get(iid=image,filename=fname)
         ojj.treasure=True
         ojj.save()
-        print(ojj.filename)
+        #print(ojj.filename)
 
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
@@ -209,22 +217,22 @@ def extract_tar_tmp(id):
 
 
 def object_to_img(iid,files2oids,links):
-        links = []
+        files = []
         for x in files2oids:
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
            # print x[1] 
             ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3])
             ojtimj.save()
-            links.append(ojtimj)
+            files.append(ojtimj)
 
         for x in links:
             oj2 = Object.objects.get(id=1)
             imj2 = Image.objects.get(id=iid)
             li = ObjectToImage(iid=imj2, oid=oj2, filename=x[0],regular_file=False)
             li.save()  
-            links.append(li)
-        return links
+            files.append(li)
+        return files
 
 @csrf_exempt
 def upload(request):
@@ -278,6 +286,9 @@ def upload(request):
     files = object_to_img(iid,files2oids,links)
 
     #Get file hierarchy and save it in db
+    #print('ppppppppppp')
+   # print files
+    #print('ooooooooooooooooooo')
     hierarchy = parseFilesToHierarchy(files)    
     #print(hierarchy)
     image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"

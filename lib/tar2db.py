@@ -6,6 +6,7 @@ import sys
 import re
 import hashlib
 import psycopg2
+import r2pipe
 
 def getFileHashes(infile):
     t = tarfile.open(infile)
@@ -48,17 +49,35 @@ def createObjects(hashes, cur):
         res.append((oid, h))
     return res
 
-def insertObjectToImage(iid, files2oids, links, cur):
-    query = """INSERT INTO object_to_image (iid, oid, filename, regular_file, uid, gid, permissions) VALUES (%(iid)s, %(oid)s, %(filename)s, %(regular_file)s, %(uid)s, %(gid)s, %(mode)s)"""
+# def insertObjectToImage(iid, files2oids, links, cur):
+#     query = """INSERT INTO object_to_image (iid, oid, filename, regular_file, uid, gid, permissions) VALUES (%(iid)s, %(oid)s, %(filename)s, %(regular_file)s, %(uid)s, %(gid)s, %(mode)s)"""
 
-    cur.executemany(query, [{'iid': iid, 'oid' : x[1], 'filename' : x[0][0],
-                             'regular_file' : True, 'uid' : x[0][1],
-                             'gid' : x[0][2], 'mode' : x[0][3]} \
-                            for x in files2oids])
-    cur.executemany(query, [{'iid': iid, 'oid' : 1, 'filename' : x[0],
-                             'regular_file' : False, 'uid' : None,
-                             'gid' : None, 'mode' : None} \
-                            for x in links])
+#     cur.executemany(query, [{'iid': iid, 'oid' : x[1], 'filename' : x[0][0],
+#                              'regular_file' : True, 'uid' : x[0][1],
+#                              'gid' : x[0][2], 'mode' : x[0][3]} \
+#                             for x in files2oids])
+#     cur.executemany(query, [{'iid': iid, 'oid' : 1, 'filename' : x[0],
+#                              'regular_file' : False, 'uid' : None,
+#                              'gid' : None, 'mode' : None} \
+#                             for x in links])
+
+def isBinary(filename):
+
+#This is not good enough
+    textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
+    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
+    return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
+
+
+def radare_kungfu(files):
+    for filename in files:
+        if isBinary(filename[0]):
+            print("File is binary, running radare & saving result to database")
+            r2=r2pipe.open("/tmp/111"+filename[0])
+            r2.cmd("s 0")
+            print(r2.cmd("i"))
+    return
+
 
 def process(iid, infile):
     dbh = psycopg2.connect(database="firmware", user="firmadyne",
@@ -75,6 +94,8 @@ def process(iid, infile):
     files2oids = [(fdict[h], oid) for (h, oid) in oids.iteritems()]
 
     #insertObjectToImage(iid, file2oid, links, cur)
+    radare_kungfu(files)
+    print("----------")
 
     dbh.commit()
 

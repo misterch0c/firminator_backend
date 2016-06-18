@@ -184,7 +184,8 @@ class ObjectToImage(models.Model):
 
 
     def __str__(self):
-        return '%s %s %s' % (self.iid, self.filename, self.regular_file)
+        return '%s %s %s %s %s %s' % (self.iid, self.filename, self.regular_file,
+        self.permissions, self.uid, self.gid)
 
     class Meta:
         managed = True

@@ -1,6 +1,6 @@
 def _parseFiles(file, result):
     #lentgh minus 1 because the first element of array is '' since the string begins with '/'
-    
+    #print(file)
     folders = file.filename.split("/")
     length = len(folders)-1
     current = 1
@@ -20,8 +20,7 @@ def _parseFiles(file, result):
             tmp = {
                 "name": "/" + folder,
                 "children": [],
-                "type": "folder",
-                "id": file.id
+                "type": "folder"
             }
             tmpResult.append(tmp)
 
@@ -31,7 +30,8 @@ def _parseFiles(file, result):
     #Parse the file itself (last one in path)
     tmpResult.append({
         "name": folders[current],
-        "type": "file"              
+        "type": "file",
+        "id": file.id             
     })
 
 
