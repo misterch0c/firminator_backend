@@ -8,7 +8,7 @@ from subprocess import Popen, PIPE
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
-from lib.tar2db import tar2db
+from lib.tar2db import tar2db, isBinary
 from django.http import HttpResponse
 from myapp.models import Image, Product, Brand, ObjectToImage, Object, Treasure
 from django.conf import settings
@@ -17,8 +17,6 @@ from django.core import serializers
 import json
 from lib.util import parseFilesToHierarchy
 from django.core.files import File
-
-
 
         # -=Making Pasta=-
 
@@ -37,8 +35,6 @@ from django.core.files import File
         #             (::::::) /(_)/   `=//==================='  
         #              `-::-' /   /     (/
         #          ----------'---'
-
-
 
 def handle_uploaded_file(f, path):
     with open(path, 'wb+') as destination:
@@ -163,39 +159,30 @@ def grepfs(img):
     return JsonResponse({"ip": ips, "mail":addy, "uri":uris })
 
 
-def test(request):
-
-    return "sup"
-
 def find_treasures(image): 
     path='/tmp/111'
-    patterns=['passwd','shadow','*.conf','*.cfg','*.ini','*.db','*.sqlite','*psk','*.pem','*.crt','*cer','*.key']
+
+    ssl=['*.pem','*.crt','*p7b','*p12','*.cer']
+    conf=['*.conf','*.cfg','*.ini']
+    ssh=['authorized_keys','*authorized_keys*','host_key','*host_key*','id_rsa','*id_rsa*','id_dsa','*id_dsa*','*.pub']
+    db=['*.db','*.sqlite']
+    dpass=['passwd','shadow','*.psk']
+    webserv=['apache','lighttpd','alphapd','httpd']
+    patterns=ssl+conf+ssh+db+dpass+webserv
     result = []
+
     for root, dirs, files in os.walk(path):
         for name in files:
             if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
                 tmppath=root+"/"+name
                 goodpath="/"+os.path.relpath(tmppath, '/tmp/111')
                 print(goodpath)
-                result.append(goodpath)
+                print(isBinary(goodpath))
+                if(isBinary(goodpath)==False):
+                    result.append(goodpath)
     #print result
     print('find treasures')
-    #print(result)
-    rez=parse_treasures(result)
-    save_treasures(rez,image)
-
-def parse_treasures(result):
-    print('oooo')
-    print(result)
-    patterns=['*.conf','*.txt','/etc/shadow','/etc/passwd']
-    result2=[]
-    for filename in result:
-        if any(fnmatch.fnmatch(filename,pattern) for pattern in patterns):
-            # print('_________')
-            # print(filename)
-            result2.append(filename)
-    #print(result2)
-    return result2
+    save_treasures(result,image)
 
 
 def save_treasures(treasures,image):
@@ -252,9 +239,13 @@ def upload(request):
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
 
+    #For debugging purpose, put the hash of the firmware you're testing here to automatically delete it from the db everytime
     if md5 == "51eddc7046d77a752ca4b39fbda50aff":
-        print "[testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
+        print "[Testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
         Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
+    if md5 == "3861871dfdbacb96a26372410dcf6b07":
+        print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
+        Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
 
     brand=get_brand(brnd)
     print("Brand: " + str(brand))
@@ -273,35 +264,26 @@ def upload(request):
 
     #Extract filesystem from firmware file
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
+    print('extract--------------------------//')
+
+    #We should handle possible errors here
     extract.extract()
-
-    #To decompress .tar.gz in /tmp
-    #extract_tar_tmp(image.id)
-
     os.chdir(settings.BASE_DIR)
     curimg=str(image.id)+".tar.gz"
     
     #Get architecture and add it in db 
     outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
+    print(outp)
     res = outp.split()
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
-
-
-    #Add filenames/path in db
     files = object_to_img(iid,files2oids,links)
-
-    #Get file hierarchy and save it in db
-    #print('ppppppppppp')
-   # print files
-    #print('ooooooooooooooooooo')
     hierarchy = parseFilesToHierarchy(files)    
     #print(hierarchy)
     image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
     image.save()
-
     find_treasures(image)
     grepfs(image)
-
     print("Architecture: "+res[0])
     print("IID: "+res[1])
+
     return HttpResponse("File uploaded // hash : %s" % md5)
