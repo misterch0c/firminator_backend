@@ -65,13 +65,17 @@ def createObjects(hashes, cur):
 #                             for x in links])
 
 def isBinary(filename):
+    #This is not good enough, must find a better solution
+    textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
+    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
+    return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
+
+#Robin: this is unstable, makes my vm crash everytime so I put it here and put the old isBinary back...
+def ffilter(filename):
     #TODO return true for specific type like 'application/octet-stream' ...
     if mimetypes.guess_type(filename)[0] is None:
         return True
     return False
-    # textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
-    # is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
-    # return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
 
 
 def radare_kungfu(files):

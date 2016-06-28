@@ -221,6 +221,15 @@ def object_to_img(iid,files2oids,links):
             files.append(li)
         return files
 
+def deleteOld(md5):
+    #For debugging purpose, put the hash of the firmware you're testing here to automatically delete it from the db everytime
+    if md5 == "51eddc7046d77a752ca4b39fbda50aff":
+        print "[Testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
+        Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
+    if md5 == "3861871dfdbacb96a26372410dcf6b07":
+        print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
+        Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
+
 @csrf_exempt
 def upload(request):
     desc = request.POST['description']
@@ -238,14 +247,8 @@ def upload(request):
     path = settings.UPLOAD_DIR + f.name
     handle_uploaded_file(f, path)
     md5 = Extractor.io_md5(path)
+    deleteOld(md5)
 
-    #For debugging purpose, put the hash of the firmware you're testing here to automatically delete it from the db everytime
-    if md5 == "51eddc7046d77a752ca4b39fbda50aff":
-        print "[Testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
-        Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
-    if md5 == "3861871dfdbacb96a26372410dcf6b07":
-        print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
-        Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
 
     brand=get_brand(brnd)
     print("Brand: " + str(brand))
