@@ -79,6 +79,7 @@ def ffilter(filename):
 
 
 def radare_kungfu(files):
+    unsafe = ('strcpy', 'strcat', 'sprintf', 'vsprintf', 'gets', 'strlen', 'scanf', 'fscanf', 'sscanf', 'vscanf', 'vsscanf', 'vfscanf', 'realpath', 'getopt', 'getpass', 'streadd', 'strecpy', 'strtrns', 'getwd')
     for fi in files:
         filename = fi[0]
         if isBinary(filename):
@@ -87,6 +88,20 @@ def radare_kungfu(files):
             r2.cmd("s 0")
             r2i = r2.cmd("i")
             fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
+            if 'static   true' in r2i: # binary is linked statically, stop analysis
+                continue
+            r2.cmd('aaa')
+            for function in unsafe:
+                result = r2.cmd('ii~' + function)
+                if result:
+                    plt = result.split()[1]
+                    address = plt[4:] # location of unsafe function
+                    formatted = address.split('x', 1)[1].lstrip('0')
+                    tmp = r2.cmd('/c' + formatted)
+                    tmp = tmp.splitlines()
+                    refs = '' # addresses that contain call to current unsafe function
+                    for lines in tmp:
+                        refs = refs + lines.split()[0] + '\n'
     return
 
 
