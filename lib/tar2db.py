@@ -85,7 +85,7 @@ def radare_kungfu(files):
             r2i = r2.cmd("i")
             fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
             if 'static   true' in r2i: # binary is linked statically, stop analysis
-                return
+                continue
             r2.cmd('aaa')
             for function in unsafe:
                 result = r2.cmd('ii~' + function)
