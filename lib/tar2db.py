@@ -67,7 +67,7 @@ def createObjects(hashes, cur):
 def isBinary(filename):
     #This is not good enough, must find a better solution
     with open(filename, 'rb') as file:
-        bytes = f.read(4)
+        bytes = file.read(4)
         return (bytes == b'\x7f\x45\x4c\x46') # check if first 4 bytes are "7f E L F"
 
 #Robin: this is unstable, makes my vm crash everytime so I put it here and put the old isBinary back...
