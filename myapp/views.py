@@ -1,3 +1,5 @@
+from __future__ import division
+
 import subprocess
 import unicodedata
 import os, fnmatch
@@ -17,6 +19,7 @@ from django.core import serializers
 import json
 from lib.util import parseFilesToHierarchy
 from django.core.files import File
+import string 
 
         # -=Making Pasta=-
 
@@ -40,6 +43,25 @@ def handle_uploaded_file(f, path):
     with open(path, 'wb+') as destination:
         for chunk in f.chunks():
             destination.write(chunk)
+
+def isText(filename):
+    s=open("/tmp/111"+filename).read(512)
+    text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
+    _null_trans = string.maketrans("", "")
+    if not s:
+        # Empty files are considered text
+        return True
+    if "\0" in s:
+        # Files with null bytes are likely binary
+        return False
+    # Get the non-text characters (maps a character to itself then
+    # use the 'remove' option to get rid of the text characters.)
+    t = s.translate(_null_trans, text_characters)
+    # If more than 30% non-text characters, then
+    # this is considered a binary file
+    if float(len(t))/float(len(s)) > 0.30:
+        return False
+    return True
 
 
 def get_brand(brand):
@@ -98,11 +120,11 @@ def getAnalysis(request):
     juicy.append(trz.ip)
     juicy.append(trz.mail)
     juicy.append(trz.uri)
-
+    print(fnames)
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
         "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":unicode(str(filescont), errors='ignore')}, safe=False)
+        "fileContent":filescont}, safe=False)
     #^not sure why I got this unicode issue, it worked before
 
 
@@ -178,7 +200,9 @@ def find_treasures(image):
                 goodpath="/"+os.path.relpath(tmppath, '/tmp/111')
                 print(goodpath)
                 print(isElf(goodpath))
-                if(isElf(goodpath)==False):
+                print(isText(goodpath))
+                #Maybe merge those two in one function?
+                if(isElf(goodpath)==False and isText(goodpath)==True):
                     result.append(goodpath)
     #print result
     print('find treasures')

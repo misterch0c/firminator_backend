@@ -87,8 +87,8 @@ def radare_kungfu(files):
             r2.cmd("s 0")
             r2i = r2.cmd("i")
             fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
-            #I'm commenting this for the moment for 2 reasons. 1. it takes like 10 minutes to complete
-            #2. idk why yet but with this code we get strange outputs in the r2i field in db
+            #I'm commenting this atm because it takes too much time to complete, maybe let's try
+            # to get rid of all those warnings?
 
 
             # if 'static   true' in r2i: # binary is linked statically, stop analysis
