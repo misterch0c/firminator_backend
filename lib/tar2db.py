@@ -79,6 +79,7 @@ def ffilter(filename):
 
 def radare_kungfu(files):
     unsafe = ('strcpy', 'strcat', 'sprintf', 'vsprintf', 'gets', 'strlen', 'scanf', 'fscanf', 'sscanf', 'vscanf', 'vsscanf', 'vfscanf', 'realpath', 'getopt', 'getpass', 'streadd', 'strecpy', 'strtrns', 'getwd')
+    results=[]
     for fi in files:
         filename = fi[0]
         if isElf(filename):
@@ -87,25 +88,23 @@ def radare_kungfu(files):
             r2.cmd("s 0")
             r2i = r2.cmd("i")
             fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
-            #I'm commenting this atm because it takes too much time to complete, maybe let's try
-            # to get rid of all those warnings?
+            if 'static   false' in r2i: # binary is linked statically, stop analysis
+                continue
+            r2.cmd('aaa')
+            for function in unsafe:
+                result = r2.cmd('ii~' + function)
 
-
-            # if 'static   true' in r2i: # binary is linked statically, stop analysis
-            #     continue
-            # r2.cmd('aaa')
-            # for function in unsafe:
-            #     result = r2.cmd('ii~' + function)
-            #     if result:
-            #         plt = result.split()[1]
-            #         address = plt[4:] # location of unsafe function
-            #         formatted = address.split('x', 1)[1].lstrip('0')
-            #         tmp = r2.cmd('/c' + formatted)
-            #         tmp = tmp.splitlines()
-            #         refs = '' # addresses that contain call to current unsafe function
-            #         for lines in tmp:
-            #             refs = refs + lines.split()[0] + '\n'
-    print('returning')
+                if result:
+                    results.append(result)
+                    plt = result.split()[1]
+                    address = plt[4:] # location of unsafe function
+                    formatted = address.split('x', 1)[1].lstrip('0')
+                    tmp = r2.cmd('/c' + formatted)
+                    tmp = tmp.splitlines()
+                    refs = '' # addresses that contain call to current unsafe function
+                    for lines in tmp:
+                        refs = refs + lines.split()[0] + '\n'
+            fi.append(results)
     return
 
 
@@ -120,7 +119,6 @@ def process(iid, infile):
 
     radare_kungfu(files)
     print("----------")
-
     #x[1] == hash in files
     fdict = dict([(x[1], (x[0], x[2], x[3], x[4], x[5])) \
             for x in files])
