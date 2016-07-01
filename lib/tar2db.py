@@ -66,9 +66,9 @@ def createObjects(hashes, cur):
 
 def isBinary(filename):
     #This is not good enough, must find a better solution
-    textchars = bytearray({7,8,9,10,12,13,27} | set(range(0x20, 0x100)) - {0x7f})
-    is_binary_string = lambda bytes: bool(bytes.translate(None, textchars))
-    return is_binary_string(open("/tmp/111"+filename, 'rb').read(1024))
+    with open(filename, 'rb') as file:
+        bytes = file.read(4)
+        return (bytes == b'\x7f\x45\x4c\x46') # check if first 4 bytes are "7f E L F"
 
 #Robin: this is unstable, makes my vm crash everytime so I put it here and put the old isBinary back...
 def ffilter(filename):
