@@ -8,7 +8,7 @@ from subprocess import Popen, PIPE
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from lib.extractor import Extractor, ExtractionItem
-from lib.tar2db import tar2db, isBinary
+from lib.tar2db import tar2db, isElf
 from django.http import HttpResponse
 from myapp.models import Image, Product, Brand, ObjectToImage, Object, Treasure
 from django.conf import settings
@@ -99,11 +99,11 @@ def getAnalysis(request):
     juicy.append(trz.mail)
     juicy.append(trz.uri)
 
-
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
         "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":filescont}, safe=False)
+        "fileContent":unicode(str(filescont), errors='ignore')}, safe=False)
+    #^not sure why I got this unicode issue, it worked before
 
 
 @csrf_exempt
@@ -177,8 +177,8 @@ def find_treasures(image):
                 tmppath=root+"/"+name
                 goodpath="/"+os.path.relpath(tmppath, '/tmp/111')
                 print(goodpath)
-                print(isBinary(goodpath))
-                if(isBinary(goodpath)==False):
+                print(isElf(goodpath))
+                if(isElf(goodpath)==False):
                     result.append(goodpath)
     #print result
     print('find treasures')
