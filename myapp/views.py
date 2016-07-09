@@ -212,7 +212,9 @@ def find_treasures(image):
 def save_treasures(treasures,image):
     fnames=""
     print('save treasures')
+    print(treasures)
     for fname in treasures:
+        print('-------------')
         ojj=ObjectToImage.objects.get(iid=image,filename=fname)
         ojj.treasure=True
         ojj.save()
@@ -253,6 +255,26 @@ def deleteOld(md5):
     if md5 == "3861871dfdbacb96a26372410dcf6b07":
         print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
         Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
+    if md5 == "352bcfa477b545cdb649527d84508daf":
+        print "[Testing] Removing existing firmware (hash 352bcfa477b545cdb649527d84508daf)"
+        Image.objects.filter(hash="352bcfa477b545cdb649527d84508daf").delete()
+
+
+
+
+
+def emul(arch,iid):
+    #what could go wrong? :^ )
+    outp2=subprocess.call(["sudo","./scripts/makeImage.sh",iid,arch])
+    outp3=subprocess.call(["sudo","./scripts/inferNetwork.sh",iid,arch])
+    print(outp2)
+    print(outp3)
+    # outp4=subprocess.call(["sudo","./scratch/"+iid+"/run.sh"])
+    # print(outp4)
+
+
+
+
 
 @csrf_exempt
 def upload(request):
@@ -286,7 +308,10 @@ def upload(request):
     # print image
     # print product
 
-    #rootfs=True, parallel=False, ,kernel=False, 
+    #rootfs=True, parallel=False, ,kernel=False,     # outp2=subprocess.check_output(["sudo","./scripts/makeImage.sh",res[1], "mipseb"],shell=True,stderr=subprocess.STDOUT)
+    # print(stderr)
+    # print(outp2)
+
     print("Image ID: "+str(image.id))
 
     #Extract filesystem from firmware file
@@ -301,16 +326,28 @@ def upload(request):
     #Get architecture and add it in db 
     outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
     print(outp)
+
     res = outp.split()
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
     files = object_to_img(iid,files2oids,links)
     hierarchy = parseFilesToHierarchy(files)    
-    #print(hierarchy)
     image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
     image.save()
-    find_treasures(image)
-    grepfs(image)
+    #find_treasures(image)
+    #grepfs(image)
     print("Architecture: "+res[0])
     print("IID: "+res[1])
+    print(curimg)
+    print('ooooooooooooooooooo')
+    print(os.environ["FIRMWARE_DIR"])
+    os.chdir(os.environ["FIRMWARE_DIR"])
+    print(os.getcwd())
+
+    #YOLO
+    emul(res[0], res[1])
+
+
+
+
 
     return HttpResponse("File uploaded // hash : %s" % md5)

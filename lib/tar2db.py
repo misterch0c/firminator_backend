@@ -117,7 +117,7 @@ def process(iid, infile):
 
     oids = getOids(files, cur)
 
-    radare_kungfu(files)
+    #radare_kungfu(files)
     print("----------")
     #x[1] == hash in files
     fdict = dict([(x[1], (x[0], x[2], x[3], x[4], x[5])) \
