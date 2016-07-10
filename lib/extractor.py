@@ -325,6 +325,7 @@ class ExtractionItem(object):
             not self.extractor.do_rootfs
         self.status = (kernel_done, rootfs_done)
 
+
         if self.database and kernel_done and self.extractor.do_kernel:
             self.update_database("kernel_extracted", "True")
 

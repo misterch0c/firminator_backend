@@ -280,7 +280,12 @@ def emul(arch,iid):
     # print(outp4)
 
 
-
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
 
 
 @csrf_exempt
@@ -299,6 +304,7 @@ def upload(request):
     f = request.FILES['file']
     path = settings.UPLOAD_DIR + f.name
     handle_uploaded_file(f, path)
+
     md5 = Extractor.io_md5(path)
     deleteOld(md5)
 
@@ -306,6 +312,8 @@ def upload(request):
     brand=get_brand(brnd)
     print("Brand: " + str(brand))
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
+    fsize=sizeof_fmt(os.path.getsize(path))
+    image.filesize=fsize
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
 
@@ -314,6 +322,8 @@ def upload(request):
     # product.save()    
     print("Image ID: "+str(image.id))
     #Extract filesystem from firmware file
+    print(FILE_PATH)
+    print(settings.EXTRACTED_DIR)
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
     print('extract--------------------------//')
     #We should handle possible errors here
@@ -322,13 +332,14 @@ def upload(request):
     curimg=str(image.id)+".tar.gz"
     
     print(os.getcwd())
-    print(image)
 
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
     files = object_to_img(iid,files2oids,links)
-    hierarchy = parseFilesToHierarchy(files)    
-    image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
-    image.save()
+    hierarchy = parseFilesToHierarchy(files)   
+    myimg=Image.objects.get(hash=md5)
+
+    myimg.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
+    myimg.save()
     #Get architecture and add it in db 
     outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
     print(outp)
@@ -344,6 +355,6 @@ def upload(request):
     print(os.getcwd())
 
     #YOLO
-    emul(res[0], res[1])
+    #emul(res[0], res[1])
 
     return HttpResponse("File uploaded // hash : %s" % md5)
