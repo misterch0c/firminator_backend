@@ -22,4 +22,5 @@ urlpatterns = [
     url(r'^file/details/([0-9]*)/$', views.getFileById),
     url(r'^file/$', views.upload),
     url(r'^getAnalysis/', views.getAnalysis),
+    url(r'^getLatest/', views.getLatest),
 ]

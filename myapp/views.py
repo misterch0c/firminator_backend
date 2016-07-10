@@ -129,6 +129,13 @@ def getAnalysis(request):
 
 
 @csrf_exempt
+def getLatest(request): 
+    lasts=Image.objects.all().values("hash","filename","brand").order_by('-id')[:10]
+    print(lasts)
+    return JsonResponse(list(lasts), safe=False)
+
+
+@csrf_exempt
 def getFileById(request,id): 
     """ To get more information about a particular file """
     oj=ObjectToImage.objects.get(id=id)
@@ -302,52 +309,41 @@ def upload(request):
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
 
-    #Add a product related to the image (commtented for easier debugging)
+    #Add a product related to the image 
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
-    # print image
-    # print product
-
-    #rootfs=True, parallel=False, ,kernel=False,     # outp2=subprocess.check_output(["sudo","./scripts/makeImage.sh",res[1], "mipseb"],shell=True,stderr=subprocess.STDOUT)
-    # print(stderr)
-    # print(outp2)
-
     print("Image ID: "+str(image.id))
-
     #Extract filesystem from firmware file
     extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
     print('extract--------------------------//')
-
     #We should handle possible errors here
     extract.extract()
     os.chdir(settings.BASE_DIR)
     curimg=str(image.id)+".tar.gz"
     
-    #Get architecture and add it in db 
-    outp = subprocess.check_output("./lib/getArch.sh ./extracted/"+curimg, shell=True)
-    print(outp)
+    print(os.getcwd())
+    print(image)
 
-    res = outp.split()
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
     files = object_to_img(iid,files2oids,links)
     hierarchy = parseFilesToHierarchy(files)    
     image.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
     image.save()
-    #find_treasures(image)
-    #grepfs(image)
+    #Get architecture and add it in db 
+    outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
+    print(outp)
+    find_treasures(image)
+    grepfs(image)
+
+    res = outp.split()
     print("Architecture: "+res[0])
     print("IID: "+res[1])
-    print(curimg)
-    print('ooooooooooooooooooo')
+    print('----------------------')
     print(os.environ["FIRMWARE_DIR"])
     os.chdir(os.environ["FIRMWARE_DIR"])
     print(os.getcwd())
 
     #YOLO
     emul(res[0], res[1])
-
-
-
-
 
     return HttpResponse("File uploaded // hash : %s" % md5)
