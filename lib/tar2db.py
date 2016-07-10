@@ -64,8 +64,8 @@ def createObjects(hashes, cur):
 #                              'gid' : None, 'mode' : None} \
 #                             for x in links])
 
-def isElf(filename):
-    with open("/tmp/111"+filename, 'rb') as file:
+def isElf(filename,iid):
+    with open("/tmp/"+str(iid)+filename, 'rb') as file:
         bytes = file.read(4)
         return (bytes == b'\x7f\x45\x4c\x46') # check if first 4 bytes are "7f E L F"
 

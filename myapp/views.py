@@ -44,8 +44,8 @@ def handle_uploaded_file(f, path):
         for chunk in f.chunks():
             destination.write(chunk)
 
-def isText(filename):
-    s=open("/tmp/111"+filename).read(512)
+def isText(filename,iid):
+    s=open("/tmp/"+str(iid)+filename).read(512)
     text_characters = "".join(map(chr, range(32, 127)) + list("\n\r\t\b"))
     _null_trans = string.maketrans("", "")
     if not s:
@@ -106,26 +106,23 @@ def getAnalysis(request):
     #hsh = request.POST['hash']
     juicy=[]
     print request
-    #print(hsh)
-
     myimg=Image.objects.get(hash=hsh)
+
     print("retrieving trasures for hash" + hsh)
     trz=Treasure.objects.get(oid=myimg)
-    tr=ObjectToImage.objects.filter(treasure=True)
+    tr=ObjectToImage.objects.filter(treasure=True,iid=myimg)
     fnames=[]
     for trez in tr:
         fnames.append(trez.filename)
-    #print fnames
-    filescont=getFileContent(fnames)
+
+    filescont=getFileContent(fnames,myimg.id)
     juicy.append(trz.ip)
     juicy.append(trz.mail)
     juicy.append(trz.uri)
-    print(fnames)
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
         "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":filescont}, safe=False)
-    #^not sure why I got this unicode issue, it worked before
+        "fileContent":filescont,"filesize":myimg.filesize}, safe=False)
 
 
 @csrf_exempt
@@ -142,13 +139,13 @@ def getFileById(request,id):
     return JsonResponse({"id":oj.id, "permissions":oj.permissions, "gid":oj.gid, "uid":oj.uid, "r2i":oj.r2i})
 
 
-def getFileContent(filenames):
+def getFileContent(filenames,iid):
     """For now let's just take some file in tmp but later the files should be on aws or something"""
-    path='/tmp/111'
+    path='/tmp/'+str(iid)
     os.chdir(path)
     rez=[]
+    print(filenames)
     for fn in filenames:
-        #print(path+fn)
         content=open(path+fn,'r')
         rez.append(content.read())
     #print(rez)
@@ -163,7 +160,7 @@ def grepfs(img):
     #path = request.POST['path']
     #myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
     myimg=img
-    path='/tmp/111'
+    path='/tmp/'+str(img.id)
     os.chdir(path)
 
     #TODO: remove all useless ip like broadcast & find a way to get the file/path too
@@ -189,7 +186,7 @@ def grepfs(img):
 
 
 def find_treasures(image): 
-    path='/tmp/111'
+    path='/tmp/'+str(image.id)
 
     ssl=['*.pem','*.crt','*p7b','*p12','*.cer']
     conf=['*.conf','*.cfg','*.ini']
@@ -204,12 +201,12 @@ def find_treasures(image):
         for name in files:
             if any(fnmatch.fnmatch(name, pattern) for pattern in patterns):
                 tmppath=root+"/"+name
-                goodpath="/"+os.path.relpath(tmppath, '/tmp/111')
+                goodpath="/"+os.path.relpath(tmppath, '/tmp/'+str(image.id))
                 print(goodpath)
-                print(isElf(goodpath))
-                print(isText(goodpath))
+                print(isElf(goodpath,image.id))
+                print(isText(goodpath,image.id))
                 #Maybe merge those two in one function?
-                if(isElf(goodpath)==False and isText(goodpath)==True):
+                if(isElf(goodpath,image.id)==False and isText(goodpath,image.id)==True):
                     result.append(goodpath)
     #print result
     print('find treasures')
@@ -230,7 +227,7 @@ def save_treasures(treasures,image):
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
     fname=str(id)+'.tar.gz'
-    path='/tmp/'+fname
+    path='/tmp/'+str(id)
     tt = tarfile.open(settings.EXTRACTED_DIR+fname)
     tt.extractall(path)
     return path
@@ -265,6 +262,9 @@ def deleteOld(md5):
     if md5 == "352bcfa477b545cdb649527d84508daf":
         print "[Testing] Removing existing firmware (hash 352bcfa477b545cdb649527d84508daf)"
         Image.objects.filter(hash="352bcfa477b545cdb649527d84508daf").delete()
+    if md5 == "97a7c7fdb4a858e169cb09468bdf749e":
+        print "[Testing] Removing existing firmware (hash 97a7c7fdb4a858e169cb09468bdf749e)"
+        Image.objects.filter(hash="97a7c7fdb4a858e169cb09468bdf749e").delete()
 
 
 
@@ -312,11 +312,11 @@ def upload(request):
     brand=get_brand(brnd)
     print("Brand: " + str(brand))
     image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
+
     fsize=sizeof_fmt(os.path.getsize(path))
     image.filesize=fsize
     image.save()
     FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
-
     #Add a product related to the image 
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
@@ -324,13 +324,17 @@ def upload(request):
     #Extract filesystem from firmware file
     print(FILE_PATH)
     print(settings.EXTRACTED_DIR)
-    extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
-    print('extract--------------------------//')
-    #We should handle possible errors here
-    extract.extract()
-    os.chdir(settings.BASE_DIR)
-    curimg=str(image.id)+".tar.gz"
-    
+    try:
+        extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
+        print('extract--------------------------//')
+        #We should handle possible errors here
+        extract.extract()
+        os.chdir(settings.BASE_DIR)
+        curimg=str(image.id)+".tar.gz"
+        extract_tar_tmp(image.id)
+    except:
+        return HttpResponse("Could not extract firmware")
+
     print(os.getcwd())
 
     iid, files2oids, links, cur = tar2db(str(image.id),'./extracted/'+curimg)
