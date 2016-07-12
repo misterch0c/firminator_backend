@@ -18,7 +18,7 @@ def getFileHashes(infile):
         if f.isfile():
             # we use f.name[1:] to get rid of the . at the beginning of the path
             fi = list()
-            fi.extend([f.name[1:], hashlib.md5(t.extractfile(f).read()).hexdigest(),f.uid, f.gid, f.mode, None])
+            fi.extend([f.name[1:], hashlib.md5(t.extractfile(f).read()).hexdigest(),f.uid, f.gid, f.mode, None,None])
             files.append(fi)
         elif f.issym():
             links.append((f.name[1:], f.linkpath))
@@ -77,14 +77,14 @@ def ffilter(filename):
     return False
 
 
-def radare_kungfu(files):
+def radare_kungfu(files,iid):
     unsafe = ('strcpy', 'strcat', 'sprintf', 'vsprintf', 'gets', 'strlen', 'scanf', 'fscanf', 'sscanf', 'vscanf', 'vsscanf', 'vfscanf', 'realpath', 'getopt', 'getpass', 'streadd', 'strecpy', 'strtrns', 'getwd')
     results=[]
     for fi in files:
         filename = fi[0]
-        if isElf(filename):
+        if isElf(filename,iid):
             #print("File is binary, running radare & saving result to database")
-            r2=r2pipe.open("/tmp/111"+filename)
+            r2=r2pipe.open("/tmp/"+str(iid)+filename)
             r2.cmd("s 0")
             r2i = r2.cmd("i")
             fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
@@ -104,7 +104,9 @@ def radare_kungfu(files):
                     refs = '' # addresses that contain call to current unsafe function
                     for lines in tmp:
                         refs = refs + lines.split()[0] + '\n'
-            fi.append(results)
+            print('rrrrrrrrrrrrrrrrrrrrrrrrrrrrr')
+            #print(fi)
+            fi[6]=("\n".join(item for item in results))
     return
 
 
@@ -117,14 +119,14 @@ def process(iid, infile):
 
     oids = getOids(files, cur)
 
-    #radare_kungfu(files)
+    radare_kungfu(files,iid)
     print("----------")
     #x[1] == hash in files
-    fdict = dict([(x[1], (x[0], x[2], x[3], x[4], x[5])) \
+    fdict = dict([(x[1], (x[0], x[2], x[3], x[4], x[5], x[6]))
             for x in files])
-
+    #print files
+ 
     files2oids = [(fdict[h], oid) for (h, oid) in oids.iteritems()]
-
     #insertObjectToImage(iid, file2oid, links, cur)
 
     dbh.commit()

@@ -144,7 +144,7 @@ class Image(models.Model):
     filesize = models.TextField(blank = True, null = True)
 
     def __str__(self):
-        return '%s %s %s %s %s' % (self.id, self.filename, self.hash, self.rootfs_extracted,self.hierarchy)
+        return '%s %s %s %s %s %s' % (self.id, self.filename, self.brand, self.hash, self.rootfs_extracted,self.hierarchy)
     class Meta:
         managed = True
         db_table = 'image'
@@ -182,7 +182,8 @@ class ObjectToImage(models.Model):
     gid = models.IntegerField(blank=True, null=True)
     content = models.TextField(null=True) #new field for file content
     treasure = models.BooleanField(default=False)
-    r2i = models.TextField(null=True) #field for radar information 
+    r2i = models.TextField(null=True) #field for radar ii 
+    insecure = models.TextField(null=True)  
 
     def __str__(self):
         return '%s %s %s %s %s %s' % (self.iid, self.filename, self.regular_file,

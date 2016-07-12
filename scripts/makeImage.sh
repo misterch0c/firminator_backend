@@ -120,5 +120,5 @@ echo "----Unmounting QEMU Image----"
 sync
 umount "${DEVICE}"
 kpartx -d "${IMAGE}"
-losetup -d "${DEVICE}" &>/dev/null
+loasetup -d "${DEVICE}" &>/dev/null
 dmsetup remove loop0p1 &>/dev/null

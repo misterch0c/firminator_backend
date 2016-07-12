@@ -122,12 +122,12 @@ def getAnalysis(request):
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
         "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":filescont,"filesize":myimg.filesize}, safe=False)
+        "fileContent":filescont,"filesize":myimg.filesize, "brand":str(myimg.brand.name)}, safe=False)
 
 
 @csrf_exempt
 def getLatest(request): 
-    lasts=Image.objects.all().values("hash","filename","brand").order_by('-id')[:10]
+    lasts=Image.objects.all().values("filename","hash","brand")
     print(lasts)
     return JsonResponse(list(lasts), safe=False)
 
@@ -236,10 +236,11 @@ def extract_tar_tmp(id):
 def object_to_img(iid,files2oids,links):
         files = []
         for x in files2oids:
+            # print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            # print(x)
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
-           # print x[1] 
-            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4])
+            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4],insecure=x[0][5])
             ojtimj.save()
             files.append(ojtimj)
 
@@ -276,6 +277,8 @@ def emul(arch,iid):
     outp3=subprocess.call(["sudo","./scripts/inferNetwork.sh",iid,arch])
     print(outp2)
     print(outp3)
+
+    #run the fw
     # outp4=subprocess.call(["sudo","./scratch/"+iid+"/run.sh"])
     # print(outp4)
 
@@ -321,6 +324,7 @@ def upload(request):
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
     print("Image ID: "+str(image.id))
+    
     #Extract filesystem from firmware file
     print(FILE_PATH)
     print(settings.EXTRACTED_DIR)
