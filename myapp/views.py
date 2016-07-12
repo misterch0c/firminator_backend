@@ -39,11 +39,11 @@ import string
         #              `-::-' /   /     (/
         #          ----------'---'
 
-def handle_uploaded_file(f, path):
-    """ Write f content to destination (path)
+def handle_uploaded_file(data, path):
+    """ Write data to destination (path)
     """
     with open(path, 'wb+') as destination:
-        for chunk in f.chunks():
+        for chunk in data.chunks():
             destination.write(chunk)
 
 def isText(filename,iid):
@@ -55,8 +55,9 @@ def isText(filename,iid):
 
 
 def get_brand(brand):
+    """ Return brand id (99 == unknown)
+    """
     b = Brand.objects.filter(name__icontains=brand)
-    #Brand id 99 is for all unknown ones
     if not b:
         return 99
     else:
@@ -78,22 +79,10 @@ def run(cmd_parts):
   return str(output), str(err), exit_code
 
 
-def print_rez_cmd(exit_code,output,err):
-    if exit_code != 0:
-      print "Output:"
-      print output
-      # print "Error:"
-      # print exit_code
-      # print err
-      # Handle error here
-    else:
-      print output
-
 @csrf_exempt
 def getAnalysis(request): 
     """ return treasures for a given hash """
     hsh= json.loads(request.body).get('hash', None)
-    #hsh = request.POST['hash']
     juicy=[]
     print request
     myimg=Image.objects.get(hash=hsh)
@@ -112,13 +101,12 @@ def getAnalysis(request):
     return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
         "juicy":juicy,"filenames":fnames,
         "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":filescont,"filesize":myimg.filesize}, safe=False)
+        "fileContent":filescont,"filesize":myimg.filesize, "brand":str(myimg.brand.name)}, safe=False)
 
 
 @csrf_exempt
 def getLatest(request): 
-    lasts=Image.objects.all().values("hash","filename","brand").order_by('-id')[:10]
-    print(lasts)
+    lasts=Image.objects.all().values("filename","hash","brand__name")
     return JsonResponse(list(lasts), safe=False)
 
 
@@ -142,10 +130,10 @@ def getFileContent(filenames,iid):
     return rez
 
 
-
-
-#grep in filesystem for passwords, emails.. and add it in database
 def grepfs(img):
+    """
+    grep in filesystem for passwords, emails.. and add it in database
+    """
     print("--grepfs--")
     #path = request.POST['path']
     #myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
@@ -226,10 +214,11 @@ def extract_tar_tmp(id):
 def object_to_img(iid,files2oids,links):
         files = []
         for x in files2oids:
+            # print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+            # print(x)
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
-           # print x[1] 
-            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4])
+            ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4],insecure=x[0][5])
             ojtimj.save()
             files.append(ojtimj)
 
@@ -266,6 +255,8 @@ def emul(arch,iid):
     outp3=subprocess.call(["sudo","./scripts/inferNetwork.sh",iid,arch])
     print(outp2)
     print(outp3)
+
+    #run the fw
     # outp4=subprocess.call(["sudo","./scratch/"+iid+"/run.sh"])
     # print(outp4)
 
@@ -311,6 +302,7 @@ def upload(request):
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
     print("Image ID: "+str(image.id))
+    
     #Extract filesystem from firmware file
     print(FILE_PATH)
     print(settings.EXTRACTED_DIR)
