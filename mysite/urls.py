@@ -19,8 +19,8 @@ from myapp import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
-    url(r'^file/details/([0-9]*)/$', views.getFileById),
+    url(r'^file/details/(?P<id>[0-9]*)/?$', views.getFileById),
     url(r'^file/$', views.upload),
-    url(r'^getAnalysis/', views.getAnalysis),
+    url(r'^getAnalysis/(?P<hash>[^/]+)/?$', views.getAnalysis),
     url(r'^getLatest/', views.getLatest),
 ]

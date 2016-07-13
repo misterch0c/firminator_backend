@@ -1,10 +1,11 @@
 from __future__ import division
 
 import subprocess
+import uuid
 import unicodedata
 import os, fnmatch
 import tarfile
-import shlex    
+import shlex
 from django.http import JsonResponse
 from subprocess import Popen, PIPE
 from django.shortcuts import render
@@ -13,13 +14,14 @@ from lib.extractor import Extractor, ExtractionItem
 from lib.tar2db import tar2db, isElf
 from django.http import HttpResponse
 from myapp.models import Image, Product, Brand, ObjectToImage, Object, Treasure
+from django.db import IntegrityError
 from django.conf import settings
 import hashlib
 from django.core import serializers
 import json
 from lib.util import parseFilesToHierarchy
 from django.core.files import File
-import string 
+import string
 
         # -=Making Pasta=-
 
@@ -39,12 +41,21 @@ import string
         #              `-::-' /   /     (/
         #          ----------'---'
 
-def handle_uploaded_file(data, path):
+def write_file(data, path):
     """ Write data to destination (path)
     """
     with open(path, 'wb+') as destination:
         for chunk in data.chunks():
             destination.write(chunk)
+
+
+def read_file(path):
+    """ read data from destination (path)
+    """
+    data = None
+    with open(path, 'r') as fd:
+        data = fd.read()
+    return data
 
 def isText(filename,iid):
     """ Check if file content is printable (text)
@@ -55,13 +66,18 @@ def isText(filename,iid):
 
 
 def get_brand(brand):
-    """ Return brand id (99 == unknown)
+    """ Return brand id
     """
     b = Brand.objects.filter(name__icontains=brand)
     if not b:
-        return 99
+        try:
+            brand = Brand.objects.get(name="Unknown")
+        except Brand.DoesNotExist:
+            brand = Brand(name="Unknown")
+            brand.save()
     else:
-        return b[0].id
+        brand = b
+    return brand
 
 def run(cmd_parts):
   """Runs the given command locally and returns the output, err and exit_code."""
@@ -80,53 +96,71 @@ def run(cmd_parts):
 
 
 @csrf_exempt
-def getAnalysis(request): 
-    """ return treasures for a given hash """
-    hsh= json.loads(request.body).get('hash', None)
+def getAnalysis(request, hash):
+    """ Return treasures for a given hash
+    """
     juicy=[]
-    print request
-    myimg=Image.objects.get(hash=hsh)
+    try:
+        myimg=Image.objects.get(hash=hash)
 
-    print("retrieving trasures for hash" + hsh)
-    trz=Treasure.objects.get(oid=myimg)
-    tr=ObjectToImage.objects.filter(treasure=True,iid=myimg)
-    fnames=[]
-    for trez in tr:
-        fnames.append(trez.filename)
+        print("retrieving treasures for hash" + hash)
+        treasures = Treasure.objects.get(oid=myimg)
+        tr = ObjectToImage.objects.filter(treasure=True, iid=myimg)
 
-    filescont=getFileContent(fnames,myimg.id)
-    juicy.append(trz.ip)
-    juicy.append(trz.mail)
-    juicy.append(trz.uri)
-    return JsonResponse({"imageFileName":myimg.filename,"hash":myimg.hash,"hierarchy":myimg.hierarchy,
-        "juicy":juicy,"filenames":fnames,
-        "arch":myimg.arch, "rootfs_extracted":myimg.rootfs_extracted,
-        "fileContent":filescont,"filesize":myimg.filesize, "brand":str(myimg.brand.name)}, safe=False)
+        fnames = []
+        for treasure in tr:
+            fnames.append(treasure.filename)
+
+        filescont = getFileContent(fnames, myimg.id)
+        juicy.append(treasures.ip)
+        juicy.append(treasures.mail)
+        juicy.append(treasures.uri)
+
+        return JsonResponse({"imageFileName": myimg.filename,
+                             "hash": myimg.hash,
+                             "hierarchy": myimg.hierarchy,
+                             "juicy": juicy,
+                             "filenames": fnames,
+                             "arch": myimg.arch,
+                             "rootfs_extracted": myimg.rootfs_extracted,
+                             "fileContent": filescont,
+                             "filesize": myimg.filesize,
+                             "brand":str(myimg.brand.name)}, safe=False)
+
+    except Image.DoesNotExist:
+        return JsonResponse({"error": "image not found"}, safe=False)
 
 
 @csrf_exempt
-def getLatest(request): 
-    lasts=Image.objects.all().values("filename","hash","brand__name")
+def getLatest(request):
+    """ Return lasts images
+    """
+    lasts = Image.objects.all().values("filename","hash","brand__name")
     return JsonResponse(list(lasts), safe=False)
 
 
 @csrf_exempt
-def getFileById(request,id): 
-    """ To get more information about a particular file """
-    oj=ObjectToImage.objects.get(id=id)
-    return JsonResponse({"id":oj.id, "permissions":oj.permissions, "gid":oj.gid, "uid":oj.uid, "r2i":oj.r2i})
+def getFileById(request, id):
+    """ To get more information about a particular file
+    """
+    obj = ObjectToImage.objects.get(id=id)
+    return JsonResponse({"id": obj.id,
+                         "permissions": obj.permissions,
+                         "gid": obj.gid,
+                         "uid": obj.uid,
+                         "r2i": obj.r2i})
 
 
 def getFileContent(filenames,iid):
-    """For now let's just take some file in tmp but later the files should be on aws or something"""
+    """ For now let's just take some file in tmp
+        but later the files should be on aws or something
+    """
     path='/tmp/'+str(iid)
     os.chdir(path)
     rez=[]
     print(filenames)
     for fn in filenames:
-        content=open(path+fn,'r')
-        rez.append(content.read())
-    #print(rez)
+        rez.append(read_file(path+fn))
     return rez
 
 
@@ -135,9 +169,7 @@ def grepfs(img):
     grep in filesystem for passwords, emails.. and add it in database
     """
     print("--grepfs--")
-    #path = request.POST['path']
-    #myimg=Image.objects.get(hash="51eddc7046d77a752ca4b39fbda50aff")
-    myimg=img
+    myimg = img
     path='/tmp/'+str(img.id)
     os.chdir(path)
 
@@ -192,30 +224,39 @@ def find_treasures(image):
 
 
 def save_treasures(treasures,image):
-    fnames=""
+    fnames = ""
     print('save treasures')
     print(treasures)
     for fname in treasures:
         print('-------------')
-        ojj=ObjectToImage.objects.get(iid=image,filename=fname)
+        ojj = ObjectToImage.objects.get(iid=image, filename=fname)
         ojj.treasure=True
         ojj.save()
-        #print(ojj.filename)
 
 #Decompress extracted in tmp for analysis
 def extract_tar_tmp(id):
     fname=str(id)+'.tar.gz'
-    path='/tmp/'+str(id)
-    tt = tarfile.open(settings.EXTRACTED_DIR+fname)
-    tt.extractall(path)
-    return path
+    path='/tmp/'+str(id)+"/"
 
+    with tarfile.open(settings.EXTRACTED_DIR+fname, 'r:gz') as tar:
+        for file_ in tar:
+            if file_.name in [".", ".."]:
+                continue
+            try:
+                tar.extract(file_, path=path)
+            except IOError as e:
+                os.remove(path + file_.name)
+                tar.extract(file_, path)
+            finally:
+                try:
+                    os.chmod(path + file_.name, file_.mode)
+                except OSError:
+                    pass
+    return path
 
 def object_to_img(iid,files2oids,links):
         files = []
         for x in files2oids:
-            # print('xxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
-            # print(x)
             oj = Object.objects.get(id=x[1])
             imj = Image.objects.get(id=iid)
             ojtimj= ObjectToImage(iid=imj, oid=oj,filename=x[0][0], regular_file=True, uid=x[0][1], gid=x[0][2], permissions=x[0][3], r2i=x[0][4],insecure=x[0][5])
@@ -230,29 +271,11 @@ def object_to_img(iid,files2oids,links):
             files.append(li)
         return files
 
-def deleteOld(md5):
-    #For debugging purpose, put the hash of the firmware you're testing here to automatically delete it from the db everytime
-    if md5 == "51eddc7046d77a752ca4b39fbda50aff":
-        print "[Testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
-        Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
-    if md5 == "3861871dfdbacb96a26372410dcf6b07":
-        print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
-        Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
-    if md5 == "352bcfa477b545cdb649527d84508daf":
-        print "[Testing] Removing existing firmware (hash 352bcfa477b545cdb649527d84508daf)"
-        Image.objects.filter(hash="352bcfa477b545cdb649527d84508daf").delete()
-    if md5 == "97a7c7fdb4a858e169cb09468bdf749e":
-        print "[Testing] Removing existing firmware (hash 97a7c7fdb4a858e169cb09468bdf749e)"
-        Image.objects.filter(hash="97a7c7fdb4a858e169cb09468bdf749e").delete()
-
-
-
-
 
 def emul(arch,iid):
     #what could go wrong? :^ )
-    outp2=subprocess.call(["sudo","./scripts/makeImage.sh",iid,arch])
-    outp3=subprocess.call(["sudo","./scripts/inferNetwork.sh",iid,arch])
+    outp3=subprocess.call(["sudo","./scripts/makeImage.sh", iid, arch])
+    outp3=subprocess.call(["sudo","./scripts/inferNetwork.sh", iid, arch])
     print(outp2)
     print(outp3)
 
@@ -271,10 +294,6 @@ def sizeof_fmt(num, suffix='B'):
 
 @csrf_exempt
 def upload(request):
-    desc = request.POST['description']
-    brnd = request.POST['brand']
-    vers = request.POST['version']  
-    mode = request.POST['model']  
 
     if not request.method == 'POST':
         return HttpResponse("POST only")
@@ -282,22 +301,39 @@ def upload(request):
     if not 'file' in request.FILES:
         return HttpResponse("No file")
 
+
+    desc = request.POST['description']
+    brand = request.POST['brand']
+    vers = request.POST['version']
+    mode = request.POST['model']
     f = request.FILES['file']
-    path = settings.UPLOAD_DIR + f.name
-    handle_uploaded_file(f, path)
+    file_name = f.name
+
+    path = settings.UPLOAD_DIR + file_name
+    write_file(f, path)
 
     md5 = Extractor.io_md5(path)
-    deleteOld(md5)
 
+    brand_obj = get_brand(brand)
+    brand_id = brand_obj.id
+    print("Brand: " + str(brand_id))
+    image = Image(filename = file_name,
+                  description = desc,
+                  brand_id = brand_id,
+                  hash = md5,
+                  rootfs_extracted = False,
+                  kernel_extracted=False)
 
-    brand=get_brand(brnd)
-    print("Brand: " + str(brand))
-    image = Image(filename=f.name,description=desc,brand_id=brand,hash=md5, rootfs_extracted=False, kernel_extracted=False)
+    fsize = sizeof_fmt(os.path.getsize(path))
+    image.filesize = fsize
 
-    fsize=sizeof_fmt(os.path.getsize(path))
-    image.filesize=fsize
-    image.save()
-    FILE_PATH = unicodedata.normalize('NFKD', settings.UPLOAD_DIR+image.filename).encode('ascii','ignore')
+    try:
+        image.save()
+    except IntegrityError:
+        # Firmware already processed
+        return JsonResponse({"status": "repost", "hash": md5})
+
+    FILE_PATH = unicodedata.normalize('NFKD', unicode(settings.UPLOAD_DIR+image.filename)).encode('ascii','ignore')
     #Add a product related to the image 
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
@@ -307,15 +343,15 @@ def upload(request):
     print(FILE_PATH)
     print(settings.EXTRACTED_DIR)
     try:
-        extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,"Netgear")
+        extract = Extractor(FILE_PATH, settings.EXTRACTED_DIR, True, False, False, '127.0.0.1' ,brand_obj.name)
         print('extract--------------------------//')
         #We should handle possible errors here
         extract.extract()
         os.chdir(settings.BASE_DIR)
         curimg=str(image.id)+".tar.gz"
         extract_tar_tmp(image.id)
-    except:
-        return HttpResponse("Could not extract firmware")
+    except NotImplementedError:
+        return JsonResponse({"error": "extract error"})
 
     print(os.getcwd())
 
@@ -336,11 +372,9 @@ def upload(request):
     print("Architecture: "+res[0])
     print("IID: "+res[1])
     print('----------------------')
+    """
     print(os.environ["FIRMWARE_DIR"])
     os.chdir(os.environ["FIRMWARE_DIR"])
     print(os.getcwd())
-
-    #YOLO
-    #emul(res[0], res[1])
-
-    return HttpResponse("File uploaded // hash : %s" % md5)
+    """
+    return JsonResponse({"status": "new", "hash": md5})

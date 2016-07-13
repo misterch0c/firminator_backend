@@ -34,7 +34,12 @@ class Image(models.Model):
     filesize = models.TextField(blank = True, null = True)
 
     def __str__(self):
-        return '%s %s %s %s %s %s' % (self.id, self.filename, self.brand, self.hash, self.rootfs_extracted,self.hierarchy)
+        return '%s %s %s %s %s %s' % (self.id, 
+                                      self.filename,
+                                      self.brand,
+                                      self.hash,
+                                      self.rootfs_extracted,
+                                      self.hierarchy)
     class Meta:
         managed = True
         db_table = 'image'

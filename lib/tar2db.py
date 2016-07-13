@@ -9,6 +9,7 @@ import psycopg2
 import r2pipe
 import unicodedata
 import mimetypes
+from django.conf import settings
 
 def getFileHashes(infile):
     t = tarfile.open(infile)
@@ -84,35 +85,41 @@ def radare_kungfu(files,iid):
         filename = fi[0]
         if isElf(filename,iid):
             #print("File is binary, running radare & saving result to database")
-            r2=r2pipe.open("/tmp/"+str(iid)+filename)
-            r2.cmd("s 0")
-            r2i = r2.cmd("i")
-            fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
-            if 'static   false' in r2i: # binary is linked statically, stop analysis
-                continue
-            r2.cmd('aaa')
-            for function in unsafe:
-                result = r2.cmd('ii~' + function)
+            try:
+                r2=r2pipe.open("/tmp/"+str(iid)+filename)
+                r2.cmd("s 0")
+                r2i = r2.cmd("i")
+                fi[5] = unicodedata.normalize('NFKD', r2i).encode('ascii','ignore')
+                if 'static   false' in r2i: # binary is linked statically, stop analysis
+                    continue
+                r2.cmd('aaa')
+                for function in unsafe:
+                    result = r2.cmd('ii~' + function)
 
-                if result:
-                    results.append(result)
-                    plt = result.split()[1]
-                    address = plt[4:] # location of unsafe function
-                    formatted = address.split('x', 1)[1].lstrip('0')
-                    tmp = r2.cmd('/c' + formatted)
-                    tmp = tmp.splitlines()
-                    refs = '' # addresses that contain call to current unsafe function
-                    for lines in tmp:
-                        refs = refs + lines.split()[0] + '\n'
-            print('rrrrrrrrrrrrrrrrrrrrrrrrrrrrr')
-            #print(fi)
-            fi[6]=("\n".join(item for item in results))
+                    if result:
+                        results.append(result)
+                        plt = result.split()[1]
+                        address = plt[4:] # location of unsafe function
+                        formatted = address.split('x', 1)[1].lstrip('0')
+                        tmp = r2.cmd('/c' + formatted)
+                        tmp = tmp.splitlines()
+                        refs = '' # addresses that contain call to current unsafe function
+                        for lines in tmp:
+                            refs = refs + lines.split()[0] + '\n'
+                print('rrrrrrrrrrrrrrrrrrrrrrrrrrrrr')
+                #print(fi)
+                fi[6]=("\n".join(item for item in results))
+            except:
+                print("Parsing failed for /tmp/%s%s" % (str(iid), filename))
+                pass
     return
 
 
 def process(iid, infile):
-    dbh = psycopg2.connect(database="firmware", user="firmadyne",
-                           password="firmadyne", host="127.0.0.1")
+    dbh = psycopg2.connect(database=settings.DATABASES["default"]["NAME"],
+                           user=settings.DATABASES["default"]["USER"],
+                           password=settings.DATABASES["default"]["PASSWORD"],
+                           host=settings.DATABASES["default"]["HOST"])
     cur = dbh.cursor()
 
     (files, links) = getFileHashes(infile)

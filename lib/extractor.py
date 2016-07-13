@@ -13,7 +13,7 @@ import os
 import shutil
 import tempfile
 import traceback
-
+from django.conf import settings
 import magic
 import binwalk
 
@@ -221,10 +221,10 @@ class ExtractionItem(object):
         # Database connection
         if self.extractor.database:
             import psycopg2
-            self.database = psycopg2.connect(database="firmware",
-                                             user="firmadyne",
-                                             password="firmadyne",
-                                             host=self.extractor.database)
+            self.database = psycopg2.connect(database=settings.DATABASES["default"]["NAME"],
+                                             user=settings.DATABASES["default"]["USER"],
+                                             password=settings.DATABASES["default"]["PASSWORD"],
+                                             host=settings.DATABASES["default"]["HOST"])
         else:
             self.database = None
 
