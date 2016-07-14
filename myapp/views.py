@@ -116,6 +116,7 @@ def run(cmd_parts):
 def getAnalysis(request, hash):
     """ Return treasures for a given hash
     """
+    print hash
     juicy=[]
     try:
         myimg=Image.objects.get(hash=hash)
@@ -165,7 +166,8 @@ def getFileById(request, id):
                          "permissions": obj.permissions,
                          "gid": obj.gid,
                          "uid": obj.uid,
-                         "r2i": obj.r2i})
+                         "r2i": obj.r2i,
+                         "insecure": obj.insecure})
 
 
 def getFileContent(filenames,iid):

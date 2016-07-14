@@ -12,6 +12,9 @@ If you want to contribute feel free to ping me on twiter [@MisterCh0c](https://t
 ##Contributors
 
 [@MisterCh0c](https://twitter.com/misterch0c)
+
 [@GeoffreyVDBerge](https://twitter.com/geoffreyvdberge)
+
 [@G4N4P4T1](https://twitter.com/G4N4P4T1)
+
 [Robin](https://github.com/robin-poncin)
