@@ -1,3 +1,6 @@
 Django==1.9.5
 psycopg2==2.6.1
 r2pipe
+django-cors-headers
+python-magic
+binwalk

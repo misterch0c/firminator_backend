@@ -41,6 +41,23 @@ import string
         #              `-::-' /   /     (/
         #          ----------'---'
 
+def deleteOld(md5):
+    #For debugging purpose, put the hash of the firmware you're testing here to automatically delete it from the db everytime
+    if md5 == "51eddc7046d77a752ca4b39fbda50aff":
+        print "[Testing] Removing existing firmware (hash 51eddc7046d77a752ca4b39fbda50aff)"
+        Image.objects.filter(hash="51eddc7046d77a752ca4b39fbda50aff").delete()
+    if md5 == "3861871dfdbacb96a26372410dcf6b07":
+        print "[Testing] Removing existing firmware (hash 3861871dfdbacb96a26372410dcf6b07)"
+        Image.objects.filter(hash="3861871dfdbacb96a26372410dcf6b07").delete()
+    if md5 == "352bcfa477b545cdb649527d84508daf":
+        print "[Testing] Removing existing firmware (hash 352bcfa477b545cdb649527d84508daf)"
+        Image.objects.filter(hash="352bcfa477b545cdb649527d84508daf").delete()
+    if md5 == "97a7c7fdb4a858e169cb09468bdf749e":
+        print "[Testing] Removing existing firmware (hash 97a7c7fdb4a858e169cb09468bdf749e)"
+        Image.objects.filter(hash="97a7c7fdb4a858e169cb09468bdf749e").delete()
+
+
+
 def write_file(data, path):
     """ Write data to destination (path)
     """
@@ -237,7 +254,8 @@ def save_treasures(treasures,image):
 def extract_tar_tmp(id):
     fname=str(id)+'.tar.gz'
     path='/tmp/'+str(id)+"/"
-
+    print(id)
+    print(fname)
     with tarfile.open(settings.EXTRACTED_DIR+fname, 'r:gz') as tar:
         for file_ in tar:
             if file_.name in [".", ".."]:
@@ -317,6 +335,7 @@ def upload(request):
     brand_obj = get_brand(brand)
     brand_id = brand_obj.id
     print("Brand: " + str(brand_id))
+    deleteOld(md5)
     image = Image(filename = file_name,
                   description = desc,
                   brand_id = brand_id,
@@ -326,18 +345,19 @@ def upload(request):
 
     fsize = sizeof_fmt(os.path.getsize(path))
     image.filesize = fsize
-
     try:
         image.save()
     except IntegrityError:
         # Firmware already processed
-        return JsonResponse({"status": "repost", "hash": md5})
+        #return JsonResponse({"status": "repost", "hash": md5})
+        print ("repost")
 
     FILE_PATH = unicodedata.normalize('NFKD', unicode(settings.UPLOAD_DIR+image.filename)).encode('ascii','ignore')
     #Add a product related to the image 
     # product = Product(iid=image,product=mode,version=vers)
     # product.save()    
     print("Image ID: "+str(image.id))
+
     
     #Extract filesystem from firmware file
     print(FILE_PATH)
@@ -349,6 +369,7 @@ def upload(request):
         extract.extract()
         os.chdir(settings.BASE_DIR)
         curimg=str(image.id)+".tar.gz"
+        print image.id
         extract_tar_tmp(image.id)
     except NotImplementedError:
         return JsonResponse({"error": "extract error"})

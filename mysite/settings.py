@@ -88,8 +88,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'NAME': 'firmware',
-        'USER' : 'postgres',
-        'PASSWORD' : 'postgres',
+        'USER' : 'firmadyne',
+        'PASSWORD' : 'firmadyne',
         'HOST' : 'localhost',
 
     }
