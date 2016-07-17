@@ -16,6 +16,7 @@ from django.http import HttpResponse
 from myapp.models import Image, Product, Brand, ObjectToImage, Object, Treasure
 from django.db import IntegrityError
 from django.conf import settings
+from django.db.models import Q
 import hashlib
 from django.core import serializers
 import json
@@ -264,13 +265,15 @@ def extract_tar_tmp(id):
                 continue
             try:
                 tar.extract(file_, path=path)
-            except IOError as e:
+            except IOError:
                 os.remove(path + file_.name)
                 tar.extract(file_, path)
             finally:
                 try:
                     os.chmod(path + file_.name, file_.mode)
-                except OSError:
+                except:
+                    """ If anyone asks, i've never wrote that
+                    """
                     pass
     return path
 
@@ -311,6 +314,27 @@ def sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f%s%s" % (num, 'Yi', suffix)
 
+@csrf_exempt
+def search(request):
+    try:
+        k = request.GET.get('keyword', False);
+        if k is False:
+            return JsonResponse({"Error": "missing keyword argument"})
+
+        firmwares = Image.objects.filter(Q(filename__icontains=k) | 
+                                         Q(description__icontains=k) | 
+                                         Q(brand__name__icontains=k)).values("hash", "description", "brand__name", "filename")
+        print firmwares
+        response = []
+        for firmware in firmwares:
+            response.append({"hash": firmware["hash"],
+                             "brand": firmware["brand__name"],
+                             "filename": firmware["filename"],
+                             "description": firmware["description"]})
+        return JsonResponse({"results": response})
+
+    except NotImplementedError:
+        return JsonResponse({"Error": "unknown error"})
 
 @csrf_exempt
 def upload(request):
@@ -386,15 +410,18 @@ def upload(request):
     myimg.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
     myimg.save()
     #Get architecture and add it in db 
-    outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
-    print(outp)
-    find_treasures(image)
-    grepfs(image)
+    try:
+        outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
+        print(outp)
+        find_treasures(image)
+        grepfs(image)
 
-    res = outp.split()
-    print("Architecture: "+res[0])
-    print("IID: "+res[1])
-    print('----------------------')
+        res = outp.split()
+        print("Architecture: "+res[0])
+        print("IID: "+res[1])
+        print('----------------------')
+    except subprocess.CalledProcessError as e:
+        print("GetArch failed a bit...")
     """
     print(os.environ["FIRMWARE_DIR"])
     os.chdir(os.environ["FIRMWARE_DIR"])
