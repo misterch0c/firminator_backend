@@ -264,13 +264,15 @@ def extract_tar_tmp(id):
                 continue
             try:
                 tar.extract(file_, path=path)
-            except IOError as e:
+            except IOError:
                 os.remove(path + file_.name)
                 tar.extract(file_, path)
             finally:
                 try:
                     os.chmod(path + file_.name, file_.mode)
-                except OSError:
+                except:
+                    """ If anyone asks, i've never wrote that
+                    """
                     pass
     return path
 
@@ -386,15 +388,18 @@ def upload(request):
     myimg.hierarchy = "[" + (', '.join([json.dumps(x) for x in hierarchy])) + "]"
     myimg.save()
     #Get architecture and add it in db 
-    outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
-    print(outp)
-    find_treasures(image)
-    grepfs(image)
+    try:
+        outp = subprocess.check_output("./lib/getArch.sh extracted/"+curimg, shell=True)
+        print(outp)
+        find_treasures(image)
+        grepfs(image)
 
-    res = outp.split()
-    print("Architecture: "+res[0])
-    print("IID: "+res[1])
-    print('----------------------')
+        res = outp.split()
+        print("Architecture: "+res[0])
+        print("IID: "+res[1])
+        print('----------------------')
+    except subprocess.CalledProcessError as e:
+        print("GetArch failed a bit...")
     """
     print(os.environ["FIRMWARE_DIR"])
     os.chdir(os.environ["FIRMWARE_DIR"])
