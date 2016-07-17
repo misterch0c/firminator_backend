@@ -1,5 +1,6 @@
 rm -f ./uploads/*;
 rm -f ./extracted/*;
+rm -f /tmp/1;
 
 export PGPASSWORD=postgres;
 psql -h localhost -U postgres -c "drop database firmware;"
