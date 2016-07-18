@@ -21,8 +21,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            #firmware = Image.objects.filter(status="waiting")[0]
-            firmware = Image.objects.all()[0]
+            firmware = Image.objects.filter(status="waiting")[0]
             self.process(firmware)
 
         except IndexError:
