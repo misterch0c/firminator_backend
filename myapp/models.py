@@ -25,6 +25,7 @@ class Image(models.Model):
     filename = models.CharField(max_length=255)
     description = models.CharField(max_length=255, blank=True, null=True)
     brand = models.ForeignKey(Brand)
+    status = models.CharField(max_length=255, default="waiting")
     hash = models.CharField(unique=True, max_length=255, blank=True, null=True)
     rootfs_extracted = models.NullBooleanField()
     kernel_extracted = models.NullBooleanField()
@@ -34,12 +35,13 @@ class Image(models.Model):
     filesize = models.TextField(blank = True, null = True)
 
     def __str__(self):
-        return '%s %s %s %s %s %s' % (self.id, 
-                                      self.filename,
-                                      self.brand,
-                                      self.hash,
-                                      self.rootfs_extracted,
-                                      self.hierarchy)
+        return '%s %s %s %s %s %s %s' % (self.id, 
+                                         self.filename,
+                                         self.status,
+                                         self.brand,
+                                         self.hash,
+                                         self.rootfs_extracted,
+                                         self.hierarchy)
     class Meta:
         managed = True
         db_table = 'image'
